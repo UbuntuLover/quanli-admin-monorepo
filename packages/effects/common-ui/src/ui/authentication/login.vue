@@ -115,7 +115,7 @@ defineExpose({
             </Title>
         </slot>
 
-        <Form/>
+        <Form />
 
         <div
             v-if="showRememberMe || showForgetPassword"
@@ -184,7 +184,7 @@ defineExpose({
       </span>
         </div>
 
-        <ThirdPartyLogin v-if="showThirdPartyLogin"/>
+        <ThirdPartyLogin v-if="showThirdPartyLogin" />
     </div>
 </template>
 
