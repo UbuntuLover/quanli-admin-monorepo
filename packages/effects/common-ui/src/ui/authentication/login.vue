@@ -1,60 +1,60 @@
 <script setup lang="ts">
-import type { Recordable } from '@vben/types';
+import type {Recordable} from '@vben/types';
 
-import type { VbenFormSchema } from '@vben-core/form-ui';
+import type {VbenFormSchema} from '@vben-core/form-ui';
 
-import type { AuthenticationProps } from './types';
+import type {AuthenticationProps} from './types';
 
-import { computed, onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import {computed, onMounted, reactive, ref} from 'vue';
+import {useRouter} from 'vue-router';
 
-import { $t } from '@vben/locales';
+import {$t} from '@vben/locales';
 
-import { useVbenForm } from '@vben-core/form-ui';
-import { VbenButton, VbenCheckbox } from '@vben-core/shadcn-ui';
+import {useVbenForm} from '@vben-core/form-ui';
+import {VbenButton, VbenCheckbox} from '@vben-core/shadcn-ui';
 
 import Title from './auth-title.vue';
 import ThirdPartyLogin from './third-party-login.vue';
 
 interface Props extends AuthenticationProps {
-  formSchema?: VbenFormSchema[];
+    formSchema?: VbenFormSchema[];
 }
 
 defineOptions({
-  name: 'AuthenticationLogin',
+    name: 'AuthenticationLogin',
 });
 
 const props = withDefaults(defineProps<Props>(), {
-  codeLoginPath: '/auth/code-login',
-  forgetPasswordPath: '/auth/forget-password',
-  formSchema: () => [],
-  loading: false,
-  qrCodeLoginPath: '/auth/qrcode-login',
-  registerPath: '/auth/register',
-  showCodeLogin: true,
-  showForgetPassword: true,
-  showQrcodeLogin: true,
-  showRegister: true,
-  showRememberMe: true,
-  showThirdPartyLogin: true,
-  submitButtonText: '',
-  subTitle: '',
-  title: '',
+    codeLoginPath: '/auth/code-login',
+    forgetPasswordPath: '/auth/forget-password',
+    formSchema: () => [],
+    loading: false,
+    qrCodeLoginPath: '/auth/qrcode-login',
+    registerPath: '/auth/register',
+    showCodeLogin: true,
+    showForgetPassword: true,
+    showQrcodeLogin: true,
+    showRegister: true,
+    showRememberMe: true,
+    showThirdPartyLogin: true,
+    submitButtonText: '',
+    subTitle: '',
+    title: '',
 });
 
 const emit = defineEmits<{
-  submit: [Recordable<any>];
+    submit: [Recordable<any>];
 }>();
 
 const [Form, formApi] = useVbenForm(
-  reactive({
-    commonConfig: {
-      hideLabel: true,
-      hideRequiredMark: true,
-    },
-    schema: computed(() => props.formSchema),
-    showDefaultActions: false,
-  }),
+    reactive({
+        commonConfig: {
+            hideLabel: true,
+            hideRequiredMark: true,
+        },
+        schema: computed(() => props.formSchema),
+        showDefaultActions: false,
+    }),
 );
 const router = useRouter();
 
@@ -64,123 +64,127 @@ const localUsername = localStorage.getItem(REMEMBER_ME_KEY) || '';
 
 const rememberMe = ref(!!localUsername);
 
+const showQuickLoginActions = computed(() => {
+    return props.showCodeLogin || props.showQrcodeLogin;
+});
+const quickLoginCount = computed(() => {
+    return [props.showCodeLogin, props.showQrcodeLogin].filter(Boolean).length;
+});
+
 async function handleSubmit() {
-  const { valid } = await formApi.validate();
-  const values = await formApi.getValues();
-  if (valid) {
-    localStorage.setItem(
-      REMEMBER_ME_KEY,
-      rememberMe.value ? values?.username : '',
-    );
-    emit('submit', values);
-  }
+    const {valid} = await formApi.validate();
+    const values = await formApi.getValues();
+    if (valid) {
+        localStorage.setItem(
+            REMEMBER_ME_KEY,
+            rememberMe.value ? values?.username : '',
+        );
+        emit('submit', values);
+    }
 }
 
 function handleGo(path: string) {
-  router.push(path);
+    router.push(path);
 }
 
 onMounted(() => {
-  if (localUsername) {
-    formApi.setFieldValue('username', localUsername);
-  }
+    if (localUsername) {
+        formApi.setFieldValue('username', localUsername);
+    }
 });
 
 defineExpose({
-  getFormApi: () => formApi,
+    getFormApi: () => formApi,
 });
 </script>
 
 <template>
-  <div @keydown.enter.prevent="handleSubmit">
-    <slot name="title">
-      <Title>
+    <div @keydown.enter.prevent="handleSubmit">
         <slot name="title">
-          {{ title || `${$t('authentication.welcomeBack')} 👋🏻` }}
-        </slot>
-        <template #desc>
+            <Title>
+                <slot name="title">
+                    {{ title || `${$t('authentication.welcomeBack')} 👋🏻` }}
+                </slot>
+                <template #desc>
           <span class="text-muted-foreground">
             <slot name="subTitle">
               {{ subTitle || $t('authentication.loginSubtitle') }}
             </slot>
           </span>
-        </template>
-      </Title>
-    </slot>
+                </template>
+            </Title>
+        </slot>
 
-    <Form />
+        <Form/>
 
-    <div
-      v-if="showRememberMe || showForgetPassword"
-      class="mb-6 flex justify-between"
-    >
-      <div class="flex-center">
-        <VbenCheckbox
-          v-if="showRememberMe"
-          v-model="rememberMe"
-          name="rememberMe"
+        <div
+            v-if="showRememberMe || showForgetPassword"
+            class="mb-6 flex justify-between"
         >
-          {{ $t('authentication.rememberMe') }}
-        </VbenCheckbox>
-      </div>
+            <div class="flex-center">
+                <VbenCheckbox
+                    v-if="showRememberMe"
+                    v-model="rememberMe"
+                    name="rememberMe"
+                >
+                    {{ $t('authentication.rememberMe') }}
+                </VbenCheckbox>
+            </div>
 
-      <span
-        v-if="showForgetPassword"
-        class="vben-link text-sm font-normal"
-        @click="handleGo(forgetPasswordPath)"
-      >
+            <span
+                v-if="showForgetPassword"
+                class="vben-link text-sm font-normal"
+                @click="handleGo(forgetPasswordPath)"
+            >
         {{ $t('authentication.forgetPassword') }}
       </span>
-    </div>
-    <VbenButton
-      :class="{
-        'cursor-wait': loading,
-      }"
-      :loading="loading"
-      aria-label="login"
-      class="w-full"
-      @click="handleSubmit"
-    >
-      {{ submitButtonText || $t('common.login') }}
-    </VbenButton>
+        </div>
 
-    <div
-      v-if="showCodeLogin || showQrcodeLogin"
-      class="mt-4 mb-2 flex items-center justify-between"
-    >
-      <VbenButton
-        v-if="showCodeLogin"
-        class="w-1/2"
-        variant="outline"
-        @click="handleGo(codeLoginPath)"
-      >
-        {{ $t('authentication.mobileLogin') }}
-      </VbenButton>
-      <VbenButton
-        v-if="showQrcodeLogin"
-        class="ml-4 w-1/2"
-        variant="outline"
-        @click="handleGo(qrCodeLoginPath)"
-      >
-        {{ $t('authentication.qrcodeLogin') }}
-      </VbenButton>
-    </div>
-
-    <!-- 第三方登录 -->
-    <slot name="third-party-login">
-      <ThirdPartyLogin v-if="showThirdPartyLogin" />
-    </slot>
-
-    <slot name="to-register">
-      <div v-if="showRegister" class="mt-3 text-center text-sm">
-        {{ $t('authentication.accountTip') }}
-        <span
-          class="vben-link text-sm font-normal"
-          @click="handleGo(registerPath)"
+        <VbenButton
+            class="w-full"
+            :loading="loading"
+            @click="handleSubmit"
         >
-          {{ $t('authentication.createAccount') }}
-        </span>
-      </div>
-    </slot>
-  </div>
+            {{ submitButtonText || $t('authentication.login') }}
+        </VbenButton>
+
+
+        <div
+            v-if="showQuickLoginActions"
+            class="mt-4 grid gap-3" :class="[
+        quickLoginCount > 1 ? 'grid-cols-2' : 'grid-cols-1',
+      ]"
+        >
+            <VbenButton
+                v-if="showCodeLogin"
+                variant="outline"
+                class="w-full"
+                @click="handleGo(codeLoginPath)"
+            >
+                {{ $t('authentication.mobileLogin') }}
+            </VbenButton>
+
+            <VbenButton
+                v-if="showQrcodeLogin"
+                variant="outline"
+                class="w-full"
+                @click="handleGo(qrCodeLoginPath)"
+            >
+                {{ $t('authentication.qrCodeLogin') }}
+            </VbenButton>
+        </div>
+
+        <div
+            v-if="showRegister"
+            class="text-muted-foreground mt-4 text-center text-sm"
+        >
+            {{ $t('authentication.accountTip') }}
+            <span class="vben-link" @click="handleGo(registerPath)">
+        {{ $t('authentication.createAccount') }}
+      </span>
+        </div>
+
+        <ThirdPartyLogin v-if="showThirdPartyLogin"/>
+    </div>
 </template>
+
