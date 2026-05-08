@@ -2,63 +2,90 @@ import { acceptHMRUpdate, defineStore } from 'pinia';
 
 interface BasicUserInfo {
   [key: string]: any;
+
   /**
-   * 头像
+   * 教练 ID。
    */
-  avatar: string;
+  coachId?: null | number;
+
   /**
-   * 用户昵称
+   * 首页路径。
    */
-  realName: string;
+  homePath?: string;
+
   /**
-   * 用户角色
+   * 会员 ID。
    */
-  roles?: string[];
+  memberId?: null | number;
+
   /**
-   * 用户id
+   * 手机号。
+   */
+  phone?: null | string;
+
+  /**
+   * 用户 ID
    */
   userId: string;
+
   /**
-   * 用户名
+   * 用户名，同时作为展示名。
    */
   username: string;
+
+  /**
+   * 用户类型。
+   */
+  userType?: string;
+
+  /**
+   * 场馆 ID 列表。
+   */
+  venueIds?: number[];
 }
 
-interface AccessState {
+interface UserState {
   /**
    * 用户信息
    */
   userInfo: BasicUserInfo | null;
+
   /**
-   * 用户角色
+   * 保留这个字段是为了兼容 Vben 内部可能读取 userRoles 的场景。
+   *
+   * 你的业务不使用角色设计，所以这里默认只作为兼容字段。
    */
   userRoles: string[];
 }
 
 /**
- * @zh_CN 用户信息相关
+ * 用户信息相关
  */
 export const useUserStore = defineStore('core-user', {
   actions: {
     setUserInfo(userInfo: BasicUserInfo | null) {
-      // 设置用户信息
       this.userInfo = userInfo;
-      // 设置角色信息
-      const roles = userInfo?.roles ?? [];
-      this.setUserRoles(roles);
+
+      /**
+       * 业务上不使用角色系统。
+       * 这里不再从 userInfo 里读取 roles。
+       */
+      this.setUserRoles(userInfo ? ['ADMIN'] : []);
     },
+
     setUserRoles(roles: string[]) {
       this.userRoles = roles;
     },
   },
-  state: (): AccessState => ({
+
+  state: (): UserState => ({
     userInfo: null,
     userRoles: [],
   }),
 });
 
-// 解决热更新问题
 const hot = import.meta.hot;
+
 if (hot) {
   hot.accept(acceptHMRUpdate(useUserStore, hot));
 }

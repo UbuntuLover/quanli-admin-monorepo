@@ -21,11 +21,13 @@ export const overridesPreferences = defineOverridesPreferences({
     // overrides
     app: {
         name: import.meta.env.VITE_APP_TITLE,
+        // 关闭刷新token
+        enableRefreshToken: false,
     },
     copyright: {
         companyName: '拳力世家',
         date: String(currentYear),
-    }
+    },
 });
 
 export const preferencesExtension =

@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import type {VbenFormSchema} from '@vben/common-ui';
 
-import {computed, markRaw} from 'vue';
+import {computed} from 'vue';
 
-import {AuthenticationLogin, SliderCaptcha, z} from '@vben/common-ui';
+import {AuthenticationLogin, z} from '@vben/common-ui';
 
 import {useAuthStore} from '#/store';
 
@@ -32,15 +32,15 @@ const formSchema = computed((): VbenFormSchema[] => {
             label: '密码',
             rules: z.string().min(1, {message: '请输入登录密码'}),
         },
-        {
-            component: 'SliderCaptcha',
-            fieldName: 'captcha',
-            label: '验证码',
-            renderComponentContent: () => markRaw(SliderCaptcha),
-            rules: z.boolean().refine((value) => value === true, {
-                message: '请完成滑块验证',
-            }),
-        },
+        // {
+        //     component: 'SliderCaptcha',
+        //     fieldName: 'captcha',
+        //     label: '验证码',
+        //     renderComponentContent: () => markRaw(SliderCaptcha),
+        //     rules: z.boolean().refine((value) => value === true, {
+        //         message: '请完成滑块验证',
+        //     }),
+        // },
     ];
 });
 </script>
@@ -52,6 +52,7 @@ const formSchema = computed((): VbenFormSchema[] => {
         :form-schema="formSchema"
         :show-register="false"
         :loading="authStore.loginLoading"
+        :captcha="true"
         @submit="authStore.authLogin"
     />
 </template>

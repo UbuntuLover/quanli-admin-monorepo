@@ -39,9 +39,15 @@ export async function loginApi(data: AuthApi.LoginParams) {
     return requestClient.post<AuthApi.LoginResult>('/api/auth/admin/login', data);
 }
 
-export async function getUserInfo() {
+/**
+ * 获取当前登录用户信息
+ */
+export async function getUserInfoApi() {
     return requestClient.get<AuthApi.LoginUserInfoVO>('/api/auth/admin/me');
 }
+
+
+
 /**
  * 刷新accessToken
  */
@@ -55,14 +61,12 @@ export async function refreshTokenApi() {
  * 退出登录
  */
 export async function logoutApi() {
-    return baseRequestClient.post('/auth/logout', {
-        withCredentials: true,
-    });
+    return baseRequestClient.post('api/auth/admin/logout');
 }
 
 /**
  * 获取用户权限码
  */
 export async function getAccessCodesApi() {
-    return requestClient.get<string[]>('/auth/codes');
+    return [];
 }

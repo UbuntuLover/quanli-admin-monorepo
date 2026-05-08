@@ -28,11 +28,11 @@ const MOCK_ROLES_OPTIONS: BasicOption[] = [
 
 const formSchema = computed((): VbenFormSchema[] => {
   return [
-    {
-      fieldName: 'realName',
-      component: 'Input',
-      label: '姓名',
-    },
+    // {
+    //   fieldName: 'realName',
+    //   component: 'Input',
+    //   label: '姓名',
+    // },
     {
       fieldName: 'username',
       component: 'Input',
