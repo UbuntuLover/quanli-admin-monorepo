@@ -25,7 +25,8 @@ export const overridesPreferences = defineOverridesPreferences({
         enableRefreshToken: false,
         loginExpiredMode: "page",
         watermark: true,
-        watermarkContent: '拳力世家'
+        watermarkContent: '拳力世家',
+        defaultHomePath: '/coach',
     },
     copyright: {
         companyName: '拳力世家',
