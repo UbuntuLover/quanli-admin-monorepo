@@ -43,7 +43,7 @@ export async function loginApi(data: AuthApi.LoginParams) {
  * 获取当前登录用户信息
  */
 export async function getUserInfoApi() {
-    return requestClient.get<AuthApi.LoginUserInfoVO>('/api/auth/admin/me');
+    return requestClient.get<AuthApi.LoginUserInfoVO>('/api/auth/me');
 }
 
 

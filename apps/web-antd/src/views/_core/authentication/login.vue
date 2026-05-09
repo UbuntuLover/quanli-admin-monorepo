@@ -47,6 +47,7 @@ const formSchema = computed((): VbenFormSchema[] => {
 
 <template>
     <AuthenticationLogin
+        :show-forget-password="false"
         :show-qrcode-login="false"
         :show-third-party-login="false"
         :form-schema="formSchema"

@@ -23,6 +23,9 @@ export const overridesPreferences = defineOverridesPreferences({
         name: import.meta.env.VITE_APP_TITLE,
         // 关闭刷新token
         enableRefreshToken: false,
+        loginExpiredMode: "page",
+        watermark: true,
+        watermarkContent: '拳力世家'
     },
     copyright: {
         companyName: '拳力世家',
