@@ -2,7 +2,7 @@
     <div class="p-4">
         <a-card :bordered="false">
             <template #title>
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-4">
                     <div>
                         <div class="text-base font-semibold">教练注册审批</div>
                         <div class="mt-1 text-xs font-normal text-gray-400">
@@ -10,28 +10,42 @@
                         </div>
                     </div>
 
-                    <a-space>
-                        <a-tag v-if="ENABLE_MOCK" color="orange">
-                            Mock 模式
-                        </a-tag>
+                    <a-space wrap>
+                        <a-input
+                            v-model:value="searchForm.keyword"
+                            allow-clear
+                            style="width: 260px"
+                            placeholder="请输入教练姓名/手机号"
+                            @pressEnter="handleSearch"
+                        />
 
-                        <a-button
-                            v-if="ENABLE_MOCK"
-                            @click="switchMockData(false)"
-                        >
+                        <a-select
+                            v-model:value="searchForm.applyStatus"
+                            :options="statusFilterOptions"
+                            allow-clear
+                            style="width: 150px"
+                            placeholder="申请状态"
+                            @change="handleSearch"
+                        />
+
+                        <a-button type="primary" :loading="loading" @click="handleSearch">
+                            搜索
+                        </a-button>
+                        <a-button :loading="loading" @click="handleResetSearch">
+                            重置
+                        </a-button>
+
+                        <a-tag v-if="ENABLE_MOCK" color="orange">Mock 模式</a-tag>
+
+                        <a-button v-if="ENABLE_MOCK" @click="switchMockData(false)">
                             模拟有数据
                         </a-button>
 
-                        <a-button
-                            v-if="ENABLE_MOCK"
-                            @click="switchMockData(true)"
-                        >
+                        <a-button v-if="ENABLE_MOCK" @click="switchMockData(true)">
                             模拟空数据
                         </a-button>
 
-                        <a-button :loading="loading" @click="fetchList">
-                            刷新
-                        </a-button>
+                        <a-button :loading="loading" @click="fetchList">刷新</a-button>
                     </a-space>
                 </div>
             </template>
@@ -57,23 +71,15 @@
             >
                 <template #bodyCell="{ column, record }">
                     <template v-if="column.key === 'avatar'">
-                        <a-avatar
-                            v-if="record.avatar"
-                            :size="42"
-                            :src="record.avatar"
-                        />
+                        <a-avatar v-if="record.avatar" :size="42" :src="record.avatar" />
                         <a-avatar v-else :size="42">
                             {{ record.name?.slice(0, 1) || '教' }}
                         </a-avatar>
                     </template>
 
                     <template v-else-if="column.key === 'name'">
-                        <div class="font-medium">
-                            {{ record.name || '-' }}
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            {{ record.phone || '-' }}
-                        </div>
+                        <div class="font-medium">{{ record.name || '-' }}</div>
+                        <div class="text-xs text-gray-400">{{ record.phone || '-' }}</div>
                     </template>
 
                     <template v-else-if="column.key === 'gender'">
@@ -82,11 +88,7 @@
 
                     <template v-else-if="column.key === 'specialties'">
                         <a-space v-if="record.specialties?.length" wrap>
-                            <a-tag
-                                v-for="item in record.specialties"
-                                :key="item"
-                                color="blue"
-                            >
+                            <a-tag v-for="item in record.specialties" :key="item" color="blue">
                                 {{ item }}
                             </a-tag>
                         </a-space>
@@ -95,11 +97,7 @@
 
                     <template v-else-if="column.key === 'tags'">
                         <a-space v-if="record.tags?.length" wrap>
-                            <a-tag
-                                v-for="item in record.tags"
-                                :key="item"
-                                color="purple"
-                            >
+                            <a-tag v-for="item in record.tags" :key="item" color="purple">
                                 {{ item }}
                             </a-tag>
                         </a-space>
@@ -122,9 +120,7 @@
 
                     <template v-else-if="column.key === 'action'">
                         <a-space>
-                            <a-button type="link" @click="openDetail(record)">
-                                详情
-                            </a-button>
+                            <a-button type="link" @click="openDetail(record)">详情</a-button>
 
                             <a-button
                                 :disabled="!canApprove(record)"
@@ -151,7 +147,7 @@
                 v-else
                 class="flex min-h-[420px] flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-12 dark:border-gray-700 dark:bg-gray-900"
             >
-                <a-empty description="暂无教练注册申请">
+                <a-empty :description="searchForm.keyword || searchForm.applyStatus ? '未找到匹配申请' : '暂无教练注册申请'">
                     <template #image>
                         <div
                             class="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-blue-50 text-4xl dark:bg-blue-950"
@@ -162,7 +158,12 @@
                 </a-empty>
 
                 <div class="mt-4 max-w-md text-center text-sm leading-6 text-gray-500">
-                    当前没有待处理的教练入驻申请。新教练提交注册资料后，会显示在这里，管理员可以进行查看、通过或驳回处理。
+                    <template v-if="searchForm.keyword || searchForm.applyStatus">
+                        未查询到符合当前筛选条件的教练申请，请调整关键词或状态后重试。
+                    </template>
+                    <template v-else>
+                        当前没有待处理的教练入驻申请。新教练提交注册资料后，会显示在这里，管理员可以进行查看、通过或驳回处理。
+                    </template>
                 </div>
 
                 <div class="mt-6 flex items-center gap-3">
@@ -170,10 +171,9 @@
                         重新查询
                     </a-button>
 
-                    <a-button
-                        v-if="ENABLE_MOCK"
-                        @click="switchMockData(false)"
-                    >
+                    <a-button @click="handleResetSearch">清空筛选条件</a-button>
+
+                    <a-button v-if="ENABLE_MOCK" @click="switchMockData(false)">
                         加载 Mock 申请
                     </a-button>
                 </div>
@@ -187,32 +187,18 @@
             title="教练申请详情"
         >
             <a-spin :spinning="detailLoading">
-                <a-empty
-                    v-if="!currentDetail && !detailLoading"
-                    description="暂无详情"
-                />
+                <a-empty v-if="!currentDetail && !detailLoading" description="暂无详情" />
 
                 <template v-if="currentDetail">
                     <div class="mb-4 flex items-center gap-4">
-                        <a-avatar
-                            v-if="currentDetail.avatar"
-                            :size="72"
-                            :src="currentDetail.avatar"
-                        />
-
+                        <a-avatar v-if="currentDetail.avatar" :size="72" :src="currentDetail.avatar" />
                         <a-avatar v-else :size="72">
                             {{ currentDetail.name?.slice(0, 1) || '教' }}
                         </a-avatar>
 
                         <div>
-                            <div class="text-lg font-semibold">
-                                {{ currentDetail.name || '-' }}
-                            </div>
-
-                            <div class="mt-1 text-sm text-gray-500">
-                                {{ currentDetail.phone || '-' }}
-                            </div>
-
+                            <div class="text-lg font-semibold">{{ currentDetail.name || '-' }}</div>
+                            <div class="mt-1 text-sm text-gray-500">{{ currentDetail.phone || '-' }}</div>
                             <div class="mt-2">
                                 <a-tag :color="getStatusColor(currentDetail.applyStatus)">
                                     {{ formatApplyStatus(currentDetail.applyStatus) }}
@@ -222,34 +208,13 @@
                     </div>
 
                     <a-descriptions bordered :column="1" size="small">
-                        <a-descriptions-item label="申请 ID">
-                            {{ currentDetail.id }}
-                        </a-descriptions-item>
-
-                        <a-descriptions-item label="申请编号">
-                            {{ currentDetail.applicationNo || '-' }}
-                        </a-descriptions-item>
-
-                        <a-descriptions-item label="姓名">
-                            {{ currentDetail.name || '-' }}
-                        </a-descriptions-item>
-
-                        <a-descriptions-item label="手机号">
-                            {{ currentDetail.phone || '-' }}
-                        </a-descriptions-item>
-
-                        <a-descriptions-item label="性别">
-                            {{ formatGender(currentDetail.gender) }}
-                        </a-descriptions-item>
-
-                        <a-descriptions-item label="生日">
-                            {{ currentDetail.birthday || '-' }}
-                        </a-descriptions-item>
-
-                        <a-descriptions-item label="雇佣类型">
-                            {{ formatEmploymentType(currentDetail.employmentType) }}
-                        </a-descriptions-item>
-
+                        <a-descriptions-item label="申请 ID">{{ currentDetail.id }}</a-descriptions-item>
+                        <a-descriptions-item label="申请编号">{{ currentDetail.applicationNo || '-' }}</a-descriptions-item>
+                        <a-descriptions-item label="姓名">{{ currentDetail.name || '-' }}</a-descriptions-item>
+                        <a-descriptions-item label="手机号">{{ currentDetail.phone || '-' }}</a-descriptions-item>
+                        <a-descriptions-item label="性别">{{ formatGender(currentDetail.gender) }}</a-descriptions-item>
+                        <a-descriptions-item label="生日">{{ currentDetail.birthday || '-' }}</a-descriptions-item>
+                        <a-descriptions-item label="雇佣类型">{{ formatEmploymentType(currentDetail.employmentType) }}</a-descriptions-item>
                         <a-descriptions-item label="申请状态">
                             <a-tag :color="getStatusColor(currentDetail.applyStatus)">
                                 {{ formatApplyStatus(currentDetail.applyStatus) }}
@@ -258,11 +223,7 @@
 
                         <a-descriptions-item label="证书">
                             <a-space v-if="currentDetail.certificates?.length" wrap>
-                                <a-tag
-                                    v-for="item in currentDetail.certificates"
-                                    :key="item"
-                                    color="green"
-                                >
+                                <a-tag v-for="item in currentDetail.certificates" :key="item" color="green">
                                     {{ item }}
                                 </a-tag>
                             </a-space>
@@ -271,11 +232,7 @@
 
                         <a-descriptions-item label="擅长项目">
                             <a-space v-if="currentDetail.specialties?.length" wrap>
-                                <a-tag
-                                    v-for="item in currentDetail.specialties"
-                                    :key="item"
-                                    color="blue"
-                                >
+                                <a-tag v-for="item in currentDetail.specialties" :key="item" color="blue">
                                     {{ item }}
                                 </a-tag>
                             </a-space>
@@ -284,11 +241,7 @@
 
                         <a-descriptions-item label="教练标签">
                             <a-space v-if="currentDetail.tags?.length" wrap>
-                                <a-tag
-                                    v-for="item in currentDetail.tags"
-                                    :key="item"
-                                    color="purple"
-                                >
+                                <a-tag v-for="item in currentDetail.tags" :key="item" color="purple">
                                     {{ item }}
                                 </a-tag>
                             </a-space>
@@ -297,10 +250,7 @@
 
                         <a-descriptions-item label="申请场馆 ID">
                             <a-space v-if="currentDetail.applyVenueIds?.length" wrap>
-                                <a-tag
-                                    v-for="item in currentDetail.applyVenueIds"
-                                    :key="item"
-                                >
+                                <a-tag v-for="item in currentDetail.applyVenueIds" :key="item">
                                     {{ item }}
                                 </a-tag>
                             </a-space>
@@ -308,9 +258,7 @@
                         </a-descriptions-item>
 
                         <a-descriptions-item label="个人介绍">
-                            <div class="whitespace-pre-wrap">
-                                {{ currentDetail.introduction || '-' }}
-                            </div>
+                            <div class="whitespace-pre-wrap">{{ currentDetail.introduction || '-' }}</div>
                         </a-descriptions-item>
 
                         <a-descriptions-item label="教练照片">
@@ -328,9 +276,7 @@
                         </a-descriptions-item>
 
                         <a-descriptions-item label="驳回原因">
-              <span class="text-red-500">
-                {{ currentDetail.rejectReason || '-' }}
-              </span>
+                            <span class="text-red-500">{{ currentDetail.rejectReason || '-' }}</span>
                         </a-descriptions-item>
 
                         <a-descriptions-item label="审批人用户 ID">
@@ -346,9 +292,7 @@
                         </a-descriptions-item>
 
                         <a-descriptions-item label="备注">
-                            <div class="whitespace-pre-wrap">
-                                {{ currentDetail.remark || '-' }}
-                            </div>
+                            <div class="whitespace-pre-wrap">{{ currentDetail.remark || '-' }}</div>
                         </a-descriptions-item>
 
                         <a-descriptions-item label="申请时间">
@@ -357,9 +301,7 @@
                     </a-descriptions>
 
                     <div class="mt-5 flex justify-end gap-2">
-                        <a-button @click="detailVisible = false">
-                            关闭
-                        </a-button>
+                        <a-button @click="detailVisible = false">关闭</a-button>
 
                         <a-button
                             v-if="canApprove(currentDetail)"
@@ -399,10 +341,7 @@
 
             <a-form layout="vertical">
                 <a-form-item label="驳回对象">
-                    <a-input
-                        :value="currentRejectRecordName"
-                        disabled
-                    />
+                    <a-input :value="currentRejectRecordName" disabled />
                 </a-form-item>
 
                 <a-form-item label="驳回原因" required>
@@ -421,11 +360,9 @@
 
 <script setup lang="ts">
 import type { TableColumnsType } from 'ant-design-vue';
-
 import type { CoachApplicationVO } from '#/api/coach/application';
 
 import { computed, onMounted, reactive, ref } from 'vue';
-
 import {
     Alert as AAlert,
     Avatar as AAvatar,
@@ -441,6 +378,7 @@ import {
     ImagePreviewGroup as AImagePreviewGroup,
     Input as AInput,
     Modal as AModal,
+    Select as ASelect,
     Space as ASpace,
     Spin as ASpin,
     Table as ATable,
@@ -466,9 +404,6 @@ defineOptions({
  * Mock 开关：
  * ENABLE_MOCK = true  使用本地 Mock 数据
  * ENABLE_MOCK = false 使用真实后端接口
- *
- * MOCK_EMPTY = true   模拟暂无申请
- * MOCK_EMPTY = false  模拟有申请数据
  */
 const ENABLE_MOCK = true;
 const mockEmptyMode = ref(false);
@@ -487,6 +422,19 @@ const currentRejectRecord = ref<CoachApplicationVO | null>(null);
 const rejectForm = reactive({
     rejectReason: '',
 });
+
+const searchForm = reactive({
+    keyword: '',
+    applyStatus: undefined as string | undefined,
+});
+
+const statusFilterOptions = [
+    { label: '全部状态', value: undefined },
+    { label: '待审批', value: 'PENDING' },
+    { label: '审核中', value: 'REVIEWING' },
+    { label: '已通过', value: 'APPROVED' },
+    { label: '已驳回', value: 'REJECTED' },
+];
 
 const hasApplications = computed(() => applicationList.value.length > 0);
 
@@ -508,8 +456,7 @@ const mockCoachApplications: CoachApplicationVO[] = [
         certificates: ['国家健身教练职业资格证', 'CPR 急救证书'],
         specialties: ['增肌训练', '减脂塑形', '力量训练'],
         tags: ['五星好评', '私教经验丰富'],
-        introduction:
-            '拥有 8 年健身行业经验，擅长根据会员体测数据制定个性化训练计划。',
+        introduction: '拥有 8 年健身行业经验，擅长根据会员体测数据制定个性化训练计划。',
         photos: [],
         applyVenueIds: [1, 2],
         employmentType: 'FULL_TIME',
@@ -532,8 +479,7 @@ const mockCoachApplications: CoachApplicationVO[] = [
         certificates: ['瑜伽教练认证', '普拉提指导认证'],
         specialties: ['瑜伽', '普拉提', '体态改善'],
         tags: ['女性塑形', '康复训练'],
-        introduction:
-            '专注女性体态改善和柔韧性训练，擅长小班课和一对一私教课程。',
+        introduction: '专注女性体态改善和柔韧性训练，擅长小班课和一对一私教课程。',
         photos: [],
         applyVenueIds: [3],
         employmentType: 'PART_TIME',
@@ -556,8 +502,7 @@ const mockCoachApplications: CoachApplicationVO[] = [
         certificates: ['功能性训练认证'],
         specialties: ['功能性训练', '运动康复'],
         tags: ['康复方向'],
-        introduction:
-            '曾服务多名运动损伤恢复会员，擅长基础评估和阶段性康复训练。',
+        introduction: '曾服务多名运动损伤恢复会员，擅长基础评估和阶段性康复训练。',
         photos: [],
         applyVenueIds: [1],
         employmentType: 'COOPERATIVE',
@@ -572,38 +517,12 @@ const mockCoachApplications: CoachApplicationVO[] = [
 ];
 
 const columns: TableColumnsType<CoachApplicationVO> = [
-    {
-        title: '头像',
-        key: 'avatar',
-        width: 90,
-        fixed: 'left',
-    },
-    {
-        title: '申请编号',
-        dataIndex: 'applicationNo',
-        key: 'applicationNo',
-        width: 180,
-    },
-    {
-        title: '教练信息',
-        key: 'name',
-        width: 150,
-    },
-    {
-        title: '性别',
-        key: 'gender',
-        width: 90,
-    },
-    {
-        title: '擅长项目',
-        key: 'specialties',
-        width: 240,
-    },
-    {
-        title: '标签',
-        key: 'tags',
-        width: 240,
-    },
+    { title: '头像', key: 'avatar', width: 90, fixed: 'left' },
+    { title: '申请编号', dataIndex: 'applicationNo', key: 'applicationNo', width: 180 },
+    { title: '教练信息', key: 'name', width: 150 },
+    { title: '性别', key: 'gender', width: 90 },
+    { title: '擅长项目', key: 'specialties', width: 240 },
+    { title: '标签', key: 'tags', width: 240 },
     {
         title: '雇佣类型',
         dataIndex: 'employmentType',
@@ -611,34 +530,14 @@ const columns: TableColumnsType<CoachApplicationVO> = [
         width: 130,
         customRender: ({ text }) => formatEmploymentType(text as string),
     },
-    {
-        title: '申请状态',
-        key: 'applyStatus',
-        width: 130,
-    },
-    {
-        title: '申请时间',
-        key: 'createdAt',
-        width: 180,
-    },
-    {
-        title: '审批时间',
-        key: 'approvedAt',
-        width: 180,
-    },
-    {
-        title: '操作',
-        key: 'action',
-        width: 210,
-        fixed: 'right',
-    },
+    { title: '申请状态', key: 'applyStatus', width: 130 },
+    { title: '申请时间', key: 'createdAt', width: 180 },
+    { title: '审批时间', key: 'approvedAt', width: 180 },
+    { title: '操作', key: 'action', width: 210, fixed: 'right' },
 ];
 
 const currentRejectRecordName = computed(() => {
-    if (!currentRejectRecord.value) {
-        return '-';
-    }
-
+    if (!currentRejectRecord.value) return '-';
     return (
         currentRejectRecord.value.name ||
         currentRejectRecord.value.phone ||
@@ -657,27 +556,66 @@ function switchMockData(empty: boolean) {
     fetchList();
 }
 
+function normalizeKeyword(value?: string) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function normalizeStatus(status?: string | null) {
+    return String(status || '').toUpperCase();
+}
+
+function isStatusMatched(recordStatus?: string | null, filterStatus?: string) {
+    if (!filterStatus) return true;
+
+    const normalized = normalizeStatus(recordStatus);
+
+    if (filterStatus === 'PENDING') {
+        return ['PENDING', 'SUBMITTED', 'WAITING', 'WAITING_APPROVAL'].includes(normalized);
+    }
+    if (filterStatus === 'APPROVED') {
+        return ['APPROVED', 'PASS', 'PASSED'].includes(normalized);
+    }
+    if (filterStatus === 'REJECTED') {
+        return ['REJECTED', 'REJECT', 'FAILED'].includes(normalized);
+    }
+    if (filterStatus === 'REVIEWING') {
+        return normalized === 'REVIEWING';
+    }
+
+    return normalized === filterStatus;
+}
+
+function filterByKeyword(list: CoachApplicationVO[], keyword: string, applyStatus?: string) {
+    const k = normalizeKeyword(keyword);
+
+    return list.filter((item) => {
+        const name = normalizeKeyword(item.name || '');
+        const phone = normalizeKeyword(item.phone || '');
+        const keywordMatched = !k || name.includes(k) || phone.includes(k);
+        const statusMatched = isStatusMatched(item.applyStatus, applyStatus);
+        return keywordMatched && statusMatched;
+    });
+}
+
+function handleSearch() {
+    fetchList();
+}
+
+function handleResetSearch() {
+    searchForm.keyword = '';
+    searchForm.applyStatus = undefined;
+    fetchList();
+}
+
 function formatGender(gender?: number | null) {
-    if (gender === 1) {
-        return '男';
-    }
-
-    if (gender === 2) {
-        return '女';
-    }
-
-    if (gender === 0) {
-        return '未知';
-    }
-
+    if (gender === 1) return '男';
+    if (gender === 2) return '女';
+    if (gender === 0) return '未知';
     return '-';
 }
 
 function formatEmploymentType(value?: string | null) {
-    if (!value) {
-        return '-';
-    }
-
+    if (!value) return '-';
     const normalizedValue = String(value).toUpperCase();
 
     const employmentTypeMap: Record<string, string> = {
@@ -691,26 +629,14 @@ function formatEmploymentType(value?: string | null) {
 }
 
 function formatDateTime(value?: string | null) {
-    if (!value) {
-        return '-';
-    }
-
+    if (!value) return '-';
     const date = dayjs(value);
-
-    if (!date.isValid()) {
-        return value;
-    }
-
+    if (!date.isValid()) return value;
     return date.format('YYYY-MM-DD HH:mm');
-}
-
-function normalizeStatus(status?: string | null) {
-    return String(status || '').toUpperCase();
 }
 
 function formatApplyStatus(status?: string | null) {
     const normalizedStatus = normalizeStatus(status);
-
     const statusMap: Record<string, string> = {
         APPROVED: '已通过',
         PASS: '已通过',
@@ -726,13 +652,11 @@ function formatApplyStatus(status?: string | null) {
         REJECTED: '已驳回',
         FAILED: '已驳回',
     };
-
     return statusMap[normalizedStatus] || status || '待审批';
 }
 
 function getStatusColor(status?: string | null) {
     const normalizedStatus = normalizeStatus(status);
-
     const colorMap: Record<string, string> = {
         APPROVED: 'success',
         PASS: 'success',
@@ -748,21 +672,14 @@ function getStatusColor(status?: string | null) {
         REJECTED: 'error',
         FAILED: 'error',
     };
-
     return colorMap[normalizedStatus] || 'processing';
 }
 
 function isPendingStatus(status?: string | null) {
     const normalizedStatus = normalizeStatus(status);
-
-    return [
-        '',
-        'PENDING',
-        'SUBMITTED',
-        'WAITING',
-        'WAITING_APPROVAL',
-        'REVIEWING',
-    ].includes(normalizedStatus);
+    return ['', 'PENDING', 'SUBMITTED', 'WAITING', 'WAITING_APPROVAL', 'REVIEWING'].includes(
+        normalizedStatus,
+    );
 }
 
 function canApprove(record: CoachApplicationVO) {
@@ -775,19 +692,29 @@ function canReject(record: CoachApplicationVO) {
 
 async function fetchList() {
     loading.value = true;
-
     try {
+        const keyword = searchForm.keyword.trim();
+        const applyStatus = searchForm.applyStatus;
+
         if (ENABLE_MOCK) {
             await sleep();
-
-            applicationList.value = mockEmptyMode.value
+            const source = mockEmptyMode.value
                 ? []
                 : mockCoachApplications.map((item) => ({ ...item }));
 
+            applicationList.value = filterByKeyword(source, keyword, applyStatus);
             return;
         }
 
-        applicationList.value = await listCoachApplicationsApi();
+        // 后端未支持 keyword/applyStatus 前，先拉全量再本地过滤兜底
+        const list = await listCoachApplicationsApi();
+        const rows = Array.isArray(list) ? list : (list.items || []);
+        applicationList.value = filterByKeyword(rows, keyword, applyStatus);
+
+        // 后端支持后可替换为：
+        // const pageData = await listCoachApplicationsApi({ keyword, applyStatus, page: 1, pageSize: 10 });
+        // const rows = Array.isArray(pageData) ? pageData : (pageData.items || []);
+        // applicationList.value = rows;
     } catch (error) {
         console.error('查询教练申请列表失败：', error);
     } finally {
@@ -827,10 +754,7 @@ function handleApprove(record: CoachApplicationVO) {
                     await sleep(300);
 
                     applicationList.value = applicationList.value.map((item) => {
-                        if (item.id !== record.id) {
-                            return item;
-                        }
-
+                        if (item.id !== record.id) return item;
                         return {
                             ...item,
                             applyStatus: 'APPROVED',
@@ -846,7 +770,6 @@ function handleApprove(record: CoachApplicationVO) {
                 }
 
                 await approveCoachApplicationApi(record.id);
-
                 message.success('审批通过成功');
 
                 detailVisible.value = false;
@@ -873,25 +796,19 @@ async function submitReject() {
     }
 
     const rejectReason = rejectForm.rejectReason.trim();
-
     if (!rejectReason) {
         message.warning('请输入驳回原因');
         return;
     }
 
     rejectLoading.value = true;
-
     try {
         if (ENABLE_MOCK) {
             await sleep(300);
 
             const rejectId = currentRejectRecord.value.id;
-
             applicationList.value = applicationList.value.map((item) => {
-                if (item.id !== rejectId) {
-                    return item;
-                }
-
+                if (item.id !== rejectId) return item;
                 return {
                     ...item,
                     applyStatus: 'REJECTED',
@@ -908,14 +825,10 @@ async function submitReject() {
             currentRejectRecord.value = null;
             currentDetail.value = null;
             rejectForm.rejectReason = '';
-
             return;
         }
 
-        await rejectCoachApplicationApi(currentRejectRecord.value.id, {
-            rejectReason,
-        });
-
+        await rejectCoachApplicationApi(currentRejectRecord.value.id, { rejectReason });
         message.success('驳回成功');
 
         rejectVisible.value = false;
