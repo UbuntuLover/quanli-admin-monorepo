@@ -12,6 +12,16 @@ const routes: RouteRecordRaw[] = [
         name: 'Dashboard',
         path: '/dashboard',
         children: [
+            {
+                name: 'CoachCreate',
+                path: '/coach/create',
+                component: () => import('#/views/coach/create/index.vue'),
+                meta: {
+                    icon: 'lucide:user-plus',
+                    keepAlive: true,
+                    title: '教练创建',
+                                   },
+            },
 
             {
                 name: 'CoachRegisterApproval',
