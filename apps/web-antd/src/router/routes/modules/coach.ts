@@ -40,8 +40,20 @@ const routes: RouteRecordRaw[] = [
                 meta: {
                     icon: 'lucide:file-pen-line',
                     keepAlive: true,
-                    title: '教练信息变更',
+                    title: '教练信息编辑',
                 },
+            },
+            {
+                path: '/coach/profile/list',
+                name: 'CoachProfileList',
+                component: () => import('#/views/coach/profile/profile.vue'),
+                meta: { title: '教练信息' },
+            },
+            {
+                path: '/coach/profile/edit/:id',
+                name: 'CoachProfileEdit',
+                component: () => import('#/views/coach/profile/edit.vue'),
+                meta: { title: '编辑教练信息', hideInMenu: true },
             }
         ]
     }];
