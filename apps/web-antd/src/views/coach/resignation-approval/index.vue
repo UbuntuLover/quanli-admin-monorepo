@@ -232,7 +232,7 @@ import {
 
 defineOptions({ name: 'CoachResignationApproval' });
 
-const ENABLE_MOCK = true;
+const ENABLE_MOCK = false;
 const mockEmptyMode = ref(false);
 
 const loading = ref(false);

@@ -138,7 +138,7 @@ import { listCoachesApi, type CoachVO } from '#/api/coach/profile';
 
 defineOptions({ name: 'CoachProfileList' });
 
-const ENABLE_MOCK = true;
+const ENABLE_MOCK = false;
 const mockEmptyMode = ref(false);
 
 const router = useRouter();

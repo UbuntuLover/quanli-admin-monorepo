@@ -1,5 +1,5 @@
 <template>
-    <div class="p-4 venue-create-page">
+    <div class="venue-create-page p-4">
         <a-card :bordered="false">
             <template #title>
                 <div class="flex items-center justify-between">
@@ -17,17 +17,17 @@
                 <a-row :gutter="[16, 8]">
                     <a-col :xs="24" :md="8">
                         <a-form-item label="场馆名称" name="name">
-                            <a-input v-model:value="form.name" placeholder="请输入场馆名称"/>
+                            <a-input v-model:value="form.name" placeholder="请输入场馆名称" />
                         </a-form-item>
                     </a-col>
                     <a-col :xs="24" :md="8">
                         <a-form-item label="联系电话" name="phone">
-                            <a-input v-model:value="form.phone" placeholder="请输入联系电话"/>
+                            <a-input v-model:value="form.phone" placeholder="请输入联系电话" />
                         </a-form-item>
                     </a-col>
                     <a-col :xs="24" :md="8">
                         <a-form-item label="营业状态" name="businessStatus">
-                            <a-select v-model:value="form.businessStatus" :options="businessStatusOptions"/>
+                            <a-select v-model:value="form.businessStatus" :options="businessStatusOptions" />
                         </a-form-item>
                     </a-col>
                 </a-row>
@@ -35,107 +35,165 @@
                 <a-row :gutter="[16, 8]">
                     <a-col :xs="24" :md="6">
                         <a-form-item label="省份">
-                            <a-input v-model:value="form.province" placeholder="如：广东省"/>
+                            <a-input v-model:value="form.province" placeholder="如：广东省" />
                         </a-form-item>
                     </a-col>
                     <a-col :xs="24" :md="6">
                         <a-form-item label="城市">
-                            <a-input v-model:value="form.city" placeholder="如：深圳市"/>
+                            <a-input v-model:value="form.city" placeholder="如：深圳市" />
                         </a-form-item>
                     </a-col>
                     <a-col :xs="24" :md="6">
                         <a-form-item label="区县">
-                            <a-input v-model:value="form.district" placeholder="如：南山区"/>
+                            <a-input v-model:value="form.district" placeholder="如：南山区" />
                         </a-form-item>
                     </a-col>
                     <a-col :xs="24" :md="6">
                         <a-form-item label="场馆状态" name="status">
-                            <a-select v-model:value="form.status" :options="statusOptions"/>
+                            <a-select v-model:value="form.status" :options="statusOptions" />
                         </a-form-item>
                     </a-col>
                 </a-row>
 
                 <a-form-item label="详细地址">
-                    <a-input v-model:value="form.address" placeholder="请输入详细地址"/>
+                    <a-input v-model:value="form.address" placeholder="请输入详细地址" />
                 </a-form-item>
 
                 <a-row :gutter="[16, 8]">
                     <a-col :xs="24" :md="6">
                         <a-form-item label="纬度">
-                            <a-input-number v-model:value="form.latitude" :min="-90" :max="90" :step="0.000001"
-                                            style="width: 100%"/>
+                            <a-input-number
+                                v-model:value="form.latitude"
+                                :min="-90"
+                                :max="90"
+                                :step="0.000001"
+                                style="width: 100%"
+                            />
                         </a-form-item>
                     </a-col>
                     <a-col :xs="24" :md="6">
                         <a-form-item label="经度">
-                            <a-input-number v-model:value="form.longitude" :min="-180" :max="180" :step="0.000001"
-                                            style="width: 100%"/>
+                            <a-input-number
+                                v-model:value="form.longitude"
+                                :min="-180"
+                                :max="180"
+                                :step="0.000001"
+                                style="width: 100%"
+                            />
                         </a-form-item>
                     </a-col>
                     <a-col :xs="24" :md="6">
                         <a-form-item label="面积(㎡)">
-                            <a-input-number v-model:value="form.areaSqm" :min="0" style="width: 100%"/>
+                            <a-input-number v-model:value="form.areaSqm" :min="0" style="width: 100%" />
                         </a-form-item>
                     </a-col>
                     <a-col :xs="24" :md="6">
                         <a-form-item label="最大容纳人数">
-                            <a-input-number v-model:value="form.capacity" :min="0" style="width: 100%"/>
+                            <a-input-number v-model:value="form.capacity" :min="0" style="width: 100%" />
                         </a-form-item>
                     </a-col>
                 </a-row>
 
                 <a-divider orientation="left">媒体与标签</a-divider>
 
-                <a-form-item label="Logo URL">
-                    <a-input v-model:value="form.logo" placeholder="https://..."/>
-                </a-form-item>
+                <a-row :gutter="[16, 16]">
+                    <a-col :xs="24" :md="12">
+                        <a-form-item label="Logo">
+                            <ImageUpload
+                                v-model="logoFile"
+                                biz-type="store"
+                                :multiple="false"
+                                :max-count="1"
+                            />
+                            <div v-if="form.logo" class="mt-2 text-xs text-gray-400 break-all">
+                                当前 URL：{{ form.logo }}
+                            </div>
+                        </a-form-item>
+                    </a-col>
 
-                <a-form-item label="背景图 URL">
-                    <a-input v-model:value="form.backgroundImage" placeholder="https://..."/>
-                </a-form-item>
+                    <a-col :xs="24" :md="12">
+                        <a-form-item label="背景图">
+                            <ImageUpload
+                                v-model="backgroundImageFile"
+                                biz-type="store"
+                                :multiple="false"
+                                :max-count="1"
+                            />
+                            <div v-if="form.backgroundImage" class="mt-2 text-xs text-gray-400 break-all">
+                                当前 URL：{{ form.backgroundImage }}
+                            </div>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
 
                 <a-form-item label="设施">
-                    <a-select v-model:value="form.facilities" mode="tags" :token-separators="[',']"
-                              placeholder="输入后回车"/>
+                    <a-select
+                        v-model:value="form.facilities"
+                        mode="tags"
+                        :token-separators="[',']"
+                        placeholder="输入后回车"
+                    />
                 </a-form-item>
 
                 <a-form-item label="标签">
-                    <a-select v-model:value="form.tags" mode="tags" :token-separators="[',']" placeholder="输入后回车"/>
+                    <a-select
+                        v-model:value="form.tags"
+                        mode="tags"
+                        :token-separators="[',']"
+                        placeholder="输入后回车"
+                    />
                 </a-form-item>
 
-                <a-form-item label="场馆图片 URL">
-                    <div class="list-box">
-                        <div v-for="(v, i) in form.photos" :key="`photo-${i}`" class="list-row">
-                            <a-input v-model:value="form.photos[i]" placeholder="https://..."/>
-                            <a-button danger @click="removeItem(form.photos, i)">删除</a-button>
-                        </div>
-                        <a-button type="dashed" block @click="addItem(form.photos)">+ 新增图片</a-button>
+                <a-form-item label="场馆图片">
+                    <ImageUpload
+                        v-model="photoFiles"
+                        biz-type="store"
+                        :multiple="true"
+                        :max-count="12"
+                    />
+                    <div class="mt-2 text-xs text-gray-400">
+                        已上传 {{ form.photos.length }} 张图片
                     </div>
                 </a-form-item>
 
-                <a-form-item label="场馆视频 URL">
-                    <div class="list-box">
-                        <div v-for="(v, i) in form.videos" :key="`video-${i}`" class="list-row">
-                            <a-input v-model:value="form.videos[i]" placeholder="https://..."/>
-                            <a-button danger @click="removeItem(form.videos, i)">删除</a-button>
-                        </div>
-                        <a-button type="dashed" block @click="addItem(form.videos)">+ 新增视频</a-button>
+                <a-form-item label="场馆视频">
+                    <VideoUpload
+                        v-model="videoFiles"
+                        biz-type="store"
+                        :multiple="true"
+                        :max-count="5"
+                        :max-size-mb="300"
+                    />
+                    <div class="mt-2 text-xs text-gray-400">
+                        已上传 {{ form.videos.length }} 个视频
                     </div>
                 </a-form-item>
 
                 <a-divider orientation="left">说明信息</a-divider>
 
                 <a-form-item label="场馆介绍">
-                    <a-textarea v-model:value="form.description" :rows="3" :maxlength="1000" show-count/>
+                    <a-textarea
+                        v-model:value="form.description"
+                        :rows="3"
+                        :maxlength="1000"
+                        show-count
+                    />
                 </a-form-item>
 
                 <a-form-item label="场馆公告">
-                    <a-textarea v-model:value="form.notice" :rows="2" :maxlength="500" show-count/>
+                    <a-textarea
+                        v-model:value="form.notice"
+                        :rows="2"
+                        :maxlength="500"
+                        show-count
+                    />
                 </a-form-item>
 
                 <div class="mt-4 flex justify-end gap-2">
                     <a-button @click="resetForm">重置</a-button>
-                    <a-button type="primary" :loading="submitting" @click="handleSubmit">创建场馆</a-button>
+                    <a-button type="primary" :loading="submitting" @click="handleSubmit">
+                        创建场馆
+                    </a-button>
                 </div>
             </a-form>
         </a-card>
@@ -143,8 +201,8 @@
 </template>
 
 <script setup lang="ts">
-import {reactive, ref} from 'vue';
-import type {Rule} from 'ant-design-vue/es/form';
+import { reactive, ref, watch } from 'vue';
+import type { Rule } from 'ant-design-vue/es/form';
 import {
     Button as AButton,
     Card as ACard,
@@ -159,9 +217,11 @@ import {
     Tag as ATag,
     message,
 } from 'ant-design-vue';
-import {createVenueApi, type VenueCreateRequest} from '#/api/venue/create';
+import { createVenueApi, type VenueCreateRequest } from '#/api/venue/create';
+import { ImageUpload, VideoUpload } from '#/components/upload';
+import type { MediaItem } from '#/components/upload';
 
-defineOptions({name: 'VenueCreate'});
+defineOptions({ name: 'VenueCreate' });
 
 type FormInstance = InstanceType<typeof AForm>;
 
@@ -169,15 +229,25 @@ const formRef = ref<FormInstance>();
 const submitting = ref(false);
 
 const businessStatusOptions = [
-    {label: '营业中', value: 1},
-    {label: '休业中', value: 2},
-    {label: '装修中', value: 3},
+    { label: '营业中', value: 1 },
+    { label: '休业中', value: 2 },
+    { label: '装修中', value: 3 },
 ];
 
 const statusOptions = [
-    {label: '正常', value: 1},
-    {label: '停用', value: 2},
+    { label: '正常', value: 1 },
+    { label: '停用', value: 2 },
 ];
+
+/**
+ * 上传组件绑定对象
+ * - 单图：MediaItem | null
+ * - 多图/多视频：MediaItem[]
+ */
+const logoFile = ref<MediaItem | null>(null);
+const backgroundImageFile = ref<MediaItem | null>(null);
+const photoFiles = ref<MediaItem[]>([]);
+const videoFiles = ref<MediaItem[]>([]);
 
 const form = reactive<VenueCreateRequest>({
     name: '',
@@ -206,18 +276,45 @@ const form = reactive<VenueCreateRequest>({
 });
 
 const rules: Record<string, Rule[]> = {
-    name: [{required: true, message: '请输入场馆名称', trigger: 'blur'}],
-    businessStatus: [{required: true, message: '请选择营业状态', trigger: 'change'}],
-    status: [{required: true, message: '请选择场馆状态', trigger: 'change'}],
+    name: [{ required: true, message: '请输入场馆名称', trigger: 'blur' }],
+    businessStatus: [{ required: true, message: '请选择营业状态', trigger: 'change' }],
+    status: [{ required: true, message: '请选择场馆状态', trigger: 'change' }],
 };
 
-function addItem(list: string[]) {
-    list.push('');
-}
+/**
+ * 上传结果同步回表单 URL 字段
+ */
+watch(
+    logoFile,
+    (val) => {
+        form.logo = val?.url || '';
+    },
+    { immediate: true },
+);
 
-function removeItem(list: string[], index: number) {
-    list.splice(index, 1);
-}
+watch(
+    backgroundImageFile,
+    (val) => {
+        form.backgroundImage = val?.url || '';
+    },
+    { immediate: true },
+);
+
+watch(
+    photoFiles,
+    (val) => {
+        form.photos = (val || []).map((item) => item.url).filter(Boolean);
+    },
+    { immediate: true, deep: true },
+);
+
+watch(
+    videoFiles,
+    (val) => {
+        form.videos = (val || []).map((item) => item.url).filter(Boolean);
+    },
+    { immediate: true, deep: true },
+);
 
 function normalizePayload(): VenueCreateRequest {
     return {
@@ -243,6 +340,12 @@ function normalizePayload(): VenueCreateRequest {
 
 function resetForm() {
     formRef.value?.resetFields();
+
+    logoFile.value = null;
+    backgroundImageFile.value = null;
+    photoFiles.value = [];
+    videoFiles.value = [];
+
     Object.assign(form, {
         name: '',
         address: '',
@@ -274,9 +377,13 @@ async function handleSubmit() {
     try {
         await formRef.value?.validate();
         submitting.value = true;
+
         const id = await createVenueApi(normalizePayload());
         message.success(`创建成功，场馆ID：${id}`);
+
         resetForm();
+    } catch (error) {
+        console.error(error);
     } finally {
         submitting.value = false;
     }
@@ -284,14 +391,7 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-.list-box {
+.venue-create-page {
     width: 100%;
-}
-
-.list-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-    margin-bottom: 8px;
 }
 </style>

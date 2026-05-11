@@ -20,7 +20,7 @@ export interface CoachApplyRequest {
 
 
 export function createCoachByApply(data: CoachApplyRequest) {
-    return requestClient.post<string>('/api/auth/coach/create', data)
+    return requestClient.post<string>('/api/admin/coach/create', data)
 }
 
 

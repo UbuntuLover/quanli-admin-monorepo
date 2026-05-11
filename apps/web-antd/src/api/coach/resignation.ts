@@ -36,23 +36,23 @@ export interface RejectResignationRequest {
 
 export async function listCoachResignationsApi(params?: CoachResignationListParams) {
     return await requestClient.get<CoachResignationPageResult | CoachResignationVO[]>(
-        '/admin/coach/resignations',
+        '/api/admin/coach/resignations',
         {params},
     );
 }
 
 
 export async function getCoachResignationDetailApi(id: number) {
-    return await requestClient.get<CoachResignationVO>(`/admin/coach/resignations/${id}`);
+    return await requestClient.get<CoachResignationVO>(`/api/admin/coach/resignations/${id}`);
 }
 
 export async function approveCoachResignationApi(id: number, approveRemark?: string) {
-    return await requestClient.post<string>(`/admin/coach/resignations/${id}/approve`, null, {
+    return await requestClient.post<string>(`/api/admin/coach/resignations/${id}/approve`, null, {
         params: {approveRemark},
     });
 
 }
 
 export async function rejectCoachResignationApi(id: number, data: RejectResignationRequest) {
-    return await requestClient.post<string>(`/admin/coach/resignations/${id}/reject`, data);
+    return await requestClient.post<string>(`/api/admin/coach/resignations/${id}/reject`, data);
 }

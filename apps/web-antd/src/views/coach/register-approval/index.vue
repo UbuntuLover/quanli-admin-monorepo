@@ -405,7 +405,7 @@ defineOptions({
  * ENABLE_MOCK = true  使用本地 Mock 数据
  * ENABLE_MOCK = false 使用真实后端接口
  */
-const ENABLE_MOCK = true;
+const ENABLE_MOCK = false;
 const mockEmptyMode = ref(false);
 
 const loading = ref(false);

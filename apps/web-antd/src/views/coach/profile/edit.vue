@@ -125,7 +125,7 @@ import {
 
 defineOptions({name: 'CoachProfileEdit'});
 
-const ENABLE_MOCK = true;
+const ENABLE_MOCK = false;
 
 const route = useRoute();
 const router = useRouter();
