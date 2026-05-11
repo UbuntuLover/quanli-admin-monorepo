@@ -99,30 +99,40 @@
                 <a-row :gutter="[16, 16]">
                     <a-col :xs="24" :md="12">
                         <a-form-item label="Logo">
-                            <ImageUpload
+                            <MediaUpload
                                 v-model="logoFile"
                                 biz-type="store"
                                 :multiple="false"
                                 :max-count="1"
+                                :draggable="false"
+                                list-type="card"
+                                :accept-config="{ image: true, video: false }"
+                                :limit-config="{ imageMaxSizeMb: 10, videoMaxSizeMb: 300 }"
                             />
                             <div v-if="form.logo" class="mt-2 text-xs text-gray-400 break-all">
                                 当前 URL：{{ form.logo }}
                             </div>
                         </a-form-item>
+
                     </a-col>
 
                     <a-col :xs="24" :md="12">
                         <a-form-item label="背景图">
-                            <ImageUpload
+                            <MediaUpload
                                 v-model="backgroundImageFile"
                                 biz-type="store"
                                 :multiple="false"
                                 :max-count="1"
+                                :draggable="false"
+                                list-type="card"
+                                :accept-config="{ image: true, video: false }"
+                                :limit-config="{ imageMaxSizeMb: 10, videoMaxSizeMb: 300 }"
                             />
                             <div v-if="form.backgroundImage" class="mt-2 text-xs text-gray-400 break-all">
                                 当前 URL：{{ form.backgroundImage }}
                             </div>
                         </a-form-item>
+
                     </a-col>
                 </a-row>
 
@@ -145,29 +155,38 @@
                 </a-form-item>
 
                 <a-form-item label="场馆图片">
-                    <ImageUpload
+                    <MediaUpload
                         v-model="photoFiles"
                         biz-type="store"
                         :multiple="true"
                         :max-count="12"
+                        :draggable="true"
+                        list-type="card"
+                        :accept-config="{ image: true, video: false }"
+                        :limit-config="{ imageMaxSizeMb: 10, videoMaxSizeMb: 300 }"
                     />
                     <div class="mt-2 text-xs text-gray-400">
                         已上传 {{ form.photos.length }} 张图片
                     </div>
                 </a-form-item>
 
+
                 <a-form-item label="场馆视频">
-                    <VideoUpload
+                    <MediaUpload
                         v-model="videoFiles"
                         biz-type="store"
                         :multiple="true"
                         :max-count="5"
-                        :max-size-mb="300"
+                        :draggable="true"
+                        list-type="card"
+                        :accept-config="{ image: false, video: true }"
+                        :limit-config="{ imageMaxSizeMb: 10, videoMaxSizeMb: 300 }"
                     />
                     <div class="mt-2 text-xs text-gray-400">
                         已上传 {{ form.videos.length }} 个视频
                     </div>
                 </a-form-item>
+
 
                 <a-divider orientation="left">说明信息</a-divider>
 
@@ -190,10 +209,10 @@
                 </a-form-item>
 
                 <div class="mt-4 flex justify-end gap-2">
-                    <a-button @click="resetForm">重置</a-button>
-                    <a-button type="primary" :loading="submitting" @click="handleSubmit">
+                    <AButton @click="resetForm">重置</AButton>
+                    <AButton type="primary" :loading="submitting" @click="handleSubmit">
                         创建场馆
-                    </a-button>
+                    </AButton>
                 </div>
             </a-form>
         </a-card>
@@ -201,6 +220,7 @@
 </template>
 
 <script setup lang="ts">
+import {MediaUpload} from "#/components/upload";
 import { reactive, ref, watch } from 'vue';
 import type { Rule } from 'ant-design-vue/es/form';
 import {
@@ -215,10 +235,10 @@ import {
     Row as ARow,
     Select as ASelect,
     Tag as ATag,
+    Textarea as ATextarea,
     message,
 } from 'ant-design-vue';
 import { createVenueApi, type VenueCreateRequest } from '#/api/venue/create';
-import { ImageUpload, VideoUpload } from '#/components/upload';
 import type { MediaItem } from '#/components/upload';
 
 defineOptions({ name: 'VenueCreate' });
