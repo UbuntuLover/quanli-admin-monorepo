@@ -1,4 +1,4 @@
-export type BizType = 'user' | 'store' | 'product' | 'common';
+export type BizType = 'user' | 'store' | 'product' | 'common' | 'coach';
 export type MediaType = 'image' | 'video';
 
 export interface MediaItem {
