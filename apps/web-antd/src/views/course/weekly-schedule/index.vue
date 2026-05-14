@@ -173,49 +173,7 @@
                     </a-descriptions>
 
                     <a-divider orientation="left">
-                        当天预约
-                    </a-divider>
-
-                    <a-empty
-                        v-if="!selectedDay.bookings?.length"
-                        description="当天暂无预约"
-                    />
-
-                    <a-list
-                        v-else
-                        bordered
-                        size="small"
-                        :data-source="selectedDay.bookings"
-                    >
-                        <template #renderItem="{ item }">
-                            <a-list-item>
-                                <a-list-item-meta>
-                                    <template #title>
-                                        <a-space>
-                      <span class="booking-time">
-                        {{ item.startTime || '-' }} - {{ item.endTime || '-' }}
-                      </span>
-
-                                            <a-tag color="blue">
-                                                {{ item.memberName || '未知会员' }}
-                                            </a-tag>
-                                        </a-space>
-                                    </template>
-
-                                    <template #description>
-                                        <div class="booking-desc">
-                                            <span>预约号：{{ item.bookingNo || '-' }}</span>
-                                            <span>课程：{{ item.packageName || '-' }}</span>
-                                            <span>时长：{{ item.duration || 0 }} 分钟</span>
-                                        </div>
-                                    </template>
-                                </a-list-item-meta>
-                            </a-list-item>
-                        </template>
-                    </a-list>
-
-                    <a-divider orientation="left">
-                        时间片详情
+                        预约与时间片
                     </a-divider>
 
                     <a-empty
@@ -223,41 +181,173 @@
                         description="暂无时间片数据"
                     />
 
-                    <div v-else class="slot-grid">
-                        <div
-                            v-for="slot in selectedDay.slots"
-                            :key="slot.slot"
-                            class="slot-item"
-                            :class="getSlotClass(slot.status)"
-                        >
-                            <div class="slot-time">
-                                {{ slot.slot }}
+                    <template v-else>
+                        <div v-if="groupedSlots.morning.length" class="slot-section">
+                            <div class="slot-section-header">
+                                <span class="slot-section-title">上午</span>
+                                <span class="slot-section-count">{{ groupedSlots.morning.length }} 个时间片</span>
                             </div>
-
-                            <a-tag :color="getSlotTagColor(slot.status)">
-                                {{ getSlotStatusText(slot.status) }}
-                            </a-tag>
-
-                            <div
-                                v-if="slot.status === ScheduleConstants.SLOT_STATUS_BOOKED"
-                                class="slot-extra"
-                            >
-                                <div>{{ slot.memberName || '未知会员' }}</div>
-                                <div class="slot-sub-text">
-                                    {{ slot.bookingNo || '-' }}
-                                </div>
-                            </div>
-
-                            <div
-                                v-else-if="
-                  slot.status === ScheduleConstants.SLOT_STATUS_BLOCKED
-                "
-                                class="slot-extra"
-                            >
-                                不可预约
+                            <div class="slot-grid">
+                                <template v-for="block in mergedSchedule.filter(b => {
+                                    const time = b.time;
+                                    if (!time) return false;
+                                    const hour = parseInt(time.split(':')[0], 10);
+                                    return !isNaN(hour) && hour < 12;
+                                })" :key="block.time">
+                                    <a-dropdown
+                                        v-if="block.type === 'booking'"
+                                        :trigger="['contextMenu']"
+                                        v-model:open="contextMenuVisible"
+                                    >
+                                        <div
+                                            class="booking-block"
+                                            :class="{ 'booking-dragging': draggingBooking?.bookingNo === (block.data as any)?.bookingNo }"
+                                            draggable="true"
+                                            @click="handleBookingClick(block.data as any)"
+                                            @dragstart="handleDragStart($event, block.data as any)"
+                                            @dragend="handleDragEnd"
+                                        >
+                                            <div class="booking-time">
+                                                {{ block.time }} - {{ (block.data as any).endTime || '-' }}
+                                            </div>
+                                            <a-tag color="blue">{{ (block.data as any).memberName || '未知会员' }}</a-tag>
+                                            <div class="booking-info">
+                                                <span>{{ (block.data as any).packageName || '-' }}</span>
+                                            </div>
+                                        </div>
+                                        <template #overlay>
+                                            <a-menu @click="closeContextMenu">
+                                                <a-menu-item key="delete" @click="handleDeleteBooking(block.data as any)">
+                                                    删除预约
+                                                </a-menu-item>
+                                            </a-menu>
+                                        </template>
+                                    </a-dropdown>
+                                    <div
+                                        v-else
+                                        class="slot-item"
+                                        :class="[
+                                            getSlotClass((block.data as any).status),
+                                            { 'slot-drop-target': dragOverSlot === block.time }
+                                        ]"
+                                        @dragover="handleDragOver($event, block.time)"
+                                        @dragleave="handleDragLeave"
+                                        @drop="handleDrop($event, block.time)"
+                                    >
+                                        <div class="slot-time">
+                                            {{ block.time }}
+                                        </div>
+                                        <a-tag :color="getSlotTagColor((block.data as any).status)">
+                                            {{ getSlotStatusText((block.data as any).status) }}
+                                        </a-tag>
+                                        <div
+                                            v-if="(block.data as any).status === ScheduleConstants.SLOT_STATUS_BLOCKED"
+                                            class="slot-extra"
+                                        >
+                                            不可预约
+                                        </div>
+                                    </div>
+                                </template>
                             </div>
                         </div>
-                    </div>
+
+                        <div v-if="groupedSlots.afternoon.length" class="slot-section">
+                            <div class="slot-section-header">
+                                <span class="slot-section-title">下午</span>
+                                <span class="slot-section-count">{{ groupedSlots.afternoon.length }} 个时间片</span>
+                            </div>
+                            <div class="slot-grid">
+                                <template v-for="block in mergedSchedule.filter(b => {
+                                    const time = b.time;
+                                    if (!time) return false;
+                                    const hour = parseInt(time.split(':')[0], 10);
+                                    return !isNaN(hour) && hour >= 12;
+                                })" :key="block.time">
+                                    <a-dropdown
+                                        v-if="block.type === 'booking'"
+                                        :trigger="['contextMenu']"
+                                        v-model:open="contextMenuVisible"
+                                    >
+                                        <div
+                                            class="booking-block"
+                                            :class="{ 'booking-dragging': draggingBooking?.bookingNo === (block.data as any)?.bookingNo }"
+                                            draggable="true"
+                                            @click="handleBookingClick(block.data as any)"
+                                            @dragstart="handleDragStart($event, block.data as any)"
+                                            @dragend="handleDragEnd"
+                                        >
+                                            <div class="booking-time">
+                                                {{ block.time }} - {{ (block.data as any).endTime || '-' }}
+                                            </div>
+                                            <a-tag color="blue">{{ (block.data as any).memberName || '未知会员' }}</a-tag>
+                                            <div class="booking-info">
+                                                <span>{{ (block.data as any).packageName || '-' }}</span>
+                                            </div>
+                                        </div>
+                                        <template #overlay>
+                                            <a-menu @click="closeContextMenu">
+                                                <a-menu-item key="delete" @click="handleDeleteBooking(block.data as any)">
+                                                    删除预约
+                                                </a-menu-item>
+                                            </a-menu>
+                                        </template>
+                                    </a-dropdown>
+                                    <div
+                                        v-else
+                                        class="slot-item"
+                                        :class="[
+                                            getSlotClass((block.data as any).status),
+                                            { 'slot-drop-target': dragOverSlot === block.time }
+                                        ]"
+                                        @dragover="handleDragOver($event, block.time)"
+                                        @dragleave="handleDragLeave"
+                                        @drop="handleDrop($event, block.time)"
+                                    >
+                                        <div class="slot-time">
+                                            {{ block.time }}
+                                        </div>
+                                        <a-tag :color="getSlotTagColor((block.data as any).status)">
+                                            {{ getSlotStatusText((block.data as any).status) }}
+                                        </a-tag>
+                                        <div
+                                            v-if="(block.data as any).status === ScheduleConstants.SLOT_STATUS_BLOCKED"
+                                            class="slot-extra"
+                                        >
+                                            不可预约
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <a-modal
+                        v-model:open="bookingDetailVisible"
+                        title="预约详情"
+                        width="500px"
+                        @cancel="bookingDetailVisible = false"
+                    >
+                        <a-descriptions bordered size="small" :column="2" v-if="selectedBooking">
+                            <a-descriptions-item label="会员姓名">
+                                {{ selectedBooking.memberName || '-' }}
+                            </a-descriptions-item>
+                            <a-descriptions-item label="预约时间">
+                                {{ selectedBooking.startTime || '-' }} - {{ selectedBooking.endTime || '-' }}
+                            </a-descriptions-item>
+                            <a-descriptions-item label="预约号">
+                                {{ selectedBooking.bookingNo || '-' }}
+                            </a-descriptions-item>
+                            <a-descriptions-item label="课程名称">
+                                {{ selectedBooking.packageName || '-' }}
+                            </a-descriptions-item>
+                            <a-descriptions-item label="时长">
+                                {{ selectedBooking.duration || 0 }} 分钟
+                            </a-descriptions-item>
+                            <a-descriptions-item label="状态">
+                                <a-tag color="blue">已预约</a-tag>
+                            </a-descriptions-item>
+                        </a-descriptions>
+                    </a-modal>
                 </template>
 
                 <a-empty v-else description="请选择某天查看详情"/>
@@ -289,10 +379,13 @@ import {
     Descriptions as ADescriptions,
     Divider as ADivider,
     Drawer as ADrawer,
+    Dropdown as ADropdown,
     Empty as AEmpty,
     Form as AForm,
     InputNumber as AInputNumber,
     List as AList,
+    Menu as AMenu,
+    Modal as AModal,
     Space as ASpace,
     Spin as ASpin,
     Table as ATable,
@@ -308,6 +401,7 @@ const ARangePicker = ADatePicker.RangePicker;
 const ADescriptionsItem = ADescriptions.Item;
 const AListItem = AList.Item;
 const AListItemMeta = AList.Item.Meta;
+const AMenuItem = AMenu.Item;
 
 interface ScheduleTableRow extends CoachScheduleRowVO {
     [key: string]: unknown;
@@ -321,6 +415,13 @@ const overview = ref<AdminScheduleOverviewVO | null>(null);
 
 const selectedCoach = ref<CoachScheduleRowVO | null>(null);
 const selectedDay = ref<CoachDayScheduleVO | null>(null);
+const selectedBooking = ref<Record<string, unknown> | null>(null);
+const bookingDetailVisible = ref(false);
+const contextMenuVisible = ref(false);
+const contextMenuPosition = reactive({ x: 0, y: 0 });
+const contextMenuBooking = ref<Record<string, unknown> | null>(null);
+const draggingBooking = ref<Record<string, unknown> | null>(null);
+const dragOverSlot = ref<string | null>(null);
 
 const queryForm = reactive({
     venueId: 1,
@@ -375,6 +476,69 @@ const columns = computed<TableColumnsType>(() => {
 
 const tableScrollX = computed(() => {
     return 190 + dateList.value.length * 160;
+});
+
+const groupedSlots = computed(() => {
+    if (!selectedDay.value?.slots?.length) {
+        return {morning: [], afternoon: []};
+    }
+
+    const morning: typeof selectedDay.value.slots = [];
+    const afternoon: typeof selectedDay.value.slots = [];
+
+    for (const slot of selectedDay.value.slots) {
+        const timeStr = slot.slot || '';
+        const hourStr = timeStr.split(':')[0];
+        const hour = parseInt(hourStr, 10);
+
+        if (!isNaN(hour) && hour < 12) {
+            morning.push(slot);
+        } else {
+            afternoon.push(slot);
+        }
+    }
+
+    return {morning, afternoon};
+});
+
+interface TimeBlock {
+    type: 'booking' | 'slot';
+    time: string;
+    endTime?: string;
+    data: Record<string, unknown>;
+    span?: number;
+}
+
+const mergedSchedule = computed(() => {
+    const result: TimeBlock[] = [];
+    const slots = selectedDay.value?.slots || [];
+    const bookings = selectedDay.value?.bookings || [];
+    const bookingMap = new Map<string, typeof bookings[0]>();
+
+    for (const booking of bookings) {
+        const key = booking.startTime || '';
+        bookingMap.set(key, booking);
+    }
+
+    for (const slot of slots) {
+        const booking = bookingMap.get(slot.slot || '');
+        if (booking) {
+            result.push({
+                type: 'booking',
+                time: slot.slot || '',
+                endTime: booking.endTime,
+                data: booking,
+            });
+        } else {
+            result.push({
+                type: 'slot',
+                time: slot.slot || '',
+                data: slot,
+            });
+        }
+    }
+
+    return result.sort((a, b) => a.time.localeCompare(b.time));
 });
 
 /**
@@ -567,6 +731,79 @@ function getSlotClass(status?: string) {
         'slot-booked': status === ScheduleConstants.SLOT_STATUS_BOOKED,
         'slot-blocked': status === ScheduleConstants.SLOT_STATUS_BLOCKED,
     };
+}
+
+function handleBookingClick(booking: Record<string, unknown>) {
+    selectedBooking.value = booking;
+    bookingDetailVisible.value = true;
+}
+
+function handleBookingContextMenu(e: MouseEvent, booking: Record<string, unknown>) {
+    e.preventDefault();
+    contextMenuBooking.value = booking;
+}
+
+function closeContextMenu() {
+    contextMenuVisible.value = false;
+}
+
+async function handleDeleteBooking(booking: Record<string, unknown>) {
+    if (!booking) return;
+
+    const bookingNo = booking.bookingNo as string | undefined;
+    if (!bookingNo) {
+        message.warning('预约号为空');
+        return;
+    }
+
+    contextMenuVisible.value = false;
+
+    message.warning({
+        content: `删除预约功能需后端接口支持，预约号: ${bookingNo}`,
+        duration: 3,
+    });
+}
+
+function handleDragStart(e: DragEvent, booking: Record<string, unknown>) {
+    draggingBooking.value = booking;
+    if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+    }
+}
+
+function handleDragEnd() {
+    draggingBooking.value = null;
+    dragOverSlot.value = null;
+}
+
+function handleDragOver(e: DragEvent, slotTime: string) {
+    e.preventDefault();
+    dragOverSlot.value = slotTime;
+}
+
+function handleDragLeave() {
+    dragOverSlot.value = null;
+}
+
+function handleDrop(e: DragEvent, targetSlotTime: string) {
+    e.preventDefault();
+
+    if (!draggingBooking.value) return;
+
+    const originalTime = draggingBooking.value.startTime;
+    if (originalTime === targetSlotTime) {
+        draggingBooking.value = null;
+        dragOverSlot.value = null;
+        return;
+    }
+
+    message.warning({
+        content: `拖动修改时间功能需后端接口支持，从 ${originalTime} 移动到 ${targetSlotTime}`,
+        duration: 3,
+    });
+
+    draggingBooking.value = null;
+    dragOverSlot.value = null;
 }
 
 async function handleSearch() {
@@ -963,15 +1200,6 @@ onMounted(() => {
     gap: 10px;
 }
 
-.slot-item {
-    min-height: 92px;
-    padding: 10px;
-    color: var(--sv-text);
-    background: var(--sv-bg-card);
-    border: 1px solid var(--sv-border);
-    border-radius: 8px;
-}
-
 .slot-available {
     background: var(--sv-ok-bg);
     border-color: var(--sv-ok-border);
@@ -1001,6 +1229,98 @@ onMounted(() => {
 
 .slot-sub-text {
     margin-top: 2px;
+    color: var(--sv-text-secondary);
+}
+
+.slot-section {
+    margin-bottom: 20px;
+}
+
+.slot-section:last-child {
+    margin-bottom: 0;
+}
+
+.slot-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    color: var(--sv-text);
+    background: var(--sv-bg-soft);
+    border-radius: 6px;
+}
+
+.slot-section-title {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.slot-section-count {
+    font-size: 12px;
+    color: var(--sv-text-secondary);
+}
+
+.slot-item {
+    min-height: 92px;
+    padding: 10px;
+    color: var(--sv-text);
+    background: var(--sv-bg-card);
+    border: 1px solid var(--sv-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease;
+}
+
+.slot-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sv-shadow-hover);
+}
+
+.slot-drop-target {
+    border-color: #1677ff;
+    border-width: 2px;
+    border-style: dashed;
+    background: color-mix(in srgb, #1677ff 8%, var(--sv-bg-card));
+}
+
+.booking-block {
+    min-height: 92px;
+    padding: 10px;
+    color: var(--sv-text);
+    background: linear-gradient(135deg, var(--sv-book-bg) 0%, color-mix(in srgb, #1677ff 20%, var(--sv-bg-card)) 100%);
+    border: 2px solid var(--sv-book-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease;
+}
+
+.booking-block:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(22, 119, 255, 0.3);
+    border-color: #40a9ff;
+}
+
+.booking-block.dragging {
+    opacity: 0.7;
+    transform: scale(1.05);
+    box-shadow: 0 8px 24px rgba(22, 119, 255, 0.4);
+}
+
+.booking-block .booking-time {
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.booking-block .booking-info {
+    margin-top: 6px;
+    font-size: 12px;
     color: var(--sv-text-secondary);
 }
 
