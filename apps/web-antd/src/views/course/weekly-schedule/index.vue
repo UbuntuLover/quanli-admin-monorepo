@@ -86,11 +86,11 @@
                         <ScheduleDayCell
                             :day="getDayByColumn(record, column.dataIndex)"
                             @click="
-                handleOpenDayDetail(
-                  record,
-                  getDayByColumn(record, column.dataIndex),
-                )
-              "
+                                handleOpenDayDetail(
+                                    record,
+                                    getDayByColumn(record, column.dataIndex),
+                                )
+                            "
                         />
                     </template>
                 </template>
@@ -123,17 +123,17 @@
                             <a-space>
                                 <a-tag
                                     v-if="
-                    selectedDay.isRestDay === ScheduleConstants.REST_DAY_YES
-                  "
+                                        selectedDay.isRestDay === ScheduleConstants.REST_DAY_YES
+                                    "
                                 >
                                     休息
                                 </a-tag>
 
                                 <a-tag
                                     v-else-if="
-                    selectedDay.isLeave ===
-                    ScheduleConstants.SCHEDULE_STATUS_LEAVE
-                  "
+                                        selectedDay.isLeave ===
+                                        ScheduleConstants.SCHEDULE_STATUS_LEAVE
+                                    "
                                     color="orange"
                                 >
                                     请假
@@ -185,63 +185,96 @@
                         <div v-if="groupedSlots.morning.length" class="slot-section">
                             <div class="slot-section-header">
                                 <span class="slot-section-title">上午</span>
-                                <span class="slot-section-count">{{ groupedSlots.morning.length }} 个时间片</span>
+                                <span class="slot-section-count">
+                                    {{ groupedSlots.morning.length }} 个时间片
+                                </span>
                             </div>
+
                             <div class="slot-grid">
-                                <template v-for="block in mergedSchedule.filter(b => {
-                                    const time = b.time;
-                                    if (!time) return false;
-                                    const hour = parseInt(time.split(':')[0], 10);
-                                    return !isNaN(hour) && hour < 12;
-                                })" :key="block.time">
+                                <template v-for="item in morningSlotViews" :key="item.time">
                                     <a-dropdown
-                                        v-if="block.type === 'booking'"
+                                        v-if="item.type === 'booking'"
                                         :trigger="['contextMenu']"
                                         v-model:open="contextMenuVisible"
                                     >
                                         <div
-                                            class="booking-block"
-                                            :class="{ 'booking-dragging': draggingBooking?.bookingNo === (block.data as any)?.bookingNo }"
+                                            class="slot-item booking-slot-piece"
+                                            :class="{
+                                                'booking-slot-start': item.isBookingStart,
+                                                'booking-slot-end': item.isBookingEnd,
+                                                'booking-slot-middle':
+                                                    !item.isBookingStart && !item.isBookingEnd,
+                                                'booking-dragging':
+                                                    draggingBooking?.bookingNo ===
+                                                    (item.booking as any)?.bookingNo,
+                                            }"
+                                            :style="getBookingSlotStyle(item.color)"
                                             draggable="true"
-                                            @click="handleBookingClick(block.data as any)"
-                                            @dragstart="handleDragStart($event, block.data as any)"
+                                            @click="handleBookingClick(item.booking as any)"
+                                            @dragstart="handleDragStart($event, item.booking as any)"
                                             @dragend="handleDragEnd"
                                         >
-                                            <div class="booking-time">
-                                                {{ block.time }} - {{ (block.data as any).endTime || '-' }}
+                                            <div class="booking-piece-time">
+                                                <template v-if="item.isBookingStart">
+                                                    {{ (item.booking as any).startTime || item.startTime }}
+                                                    -
+                                                    {{ (item.booking as any).endTime || item.endTime }}
+                                                </template>
+
+                                                <template v-else>
+                                                    {{ item.startTime }}-{{ item.endTime }}
+                                                </template>
                                             </div>
-                                            <a-tag color="blue">{{ (block.data as any).memberName || '未知会员' }}</a-tag>
-                                            <div class="booking-info">
-                                                <span>{{ (block.data as any).packageName || '-' }}</span>
+
+                                            <div v-if="item.isBookingStart" class="booking-piece-main">
+                                                {{ (item.booking as any).memberName || '未知会员' }}
+                                            </div>
+
+                                            <div v-if="item.isBookingStart" class="booking-piece-sub">
+                                                {{ (item.booking as any).packageName || '-' }}
+                                            </div>
+
+                                            <div v-else class="booking-piece-sub">
+                                                占用中
                                             </div>
                                         </div>
+
                                         <template #overlay>
                                             <a-menu @click="closeContextMenu">
-                                                <a-menu-item key="delete" @click="handleDeleteBooking(block.data as any)">
+                                                <a-menu-item
+                                                    key="delete"
+                                                    @click="handleDeleteBooking(item.booking as any)"
+                                                >
                                                     删除预约
                                                 </a-menu-item>
                                             </a-menu>
                                         </template>
                                     </a-dropdown>
+
                                     <div
                                         v-else
                                         class="slot-item"
                                         :class="[
-                                            getSlotClass((block.data as any).status),
-                                            { 'slot-drop-target': dragOverSlot === block.time }
+                                            getSlotClass((item.data as any).status),
+                                            { 'slot-drop-target': dragOverSlot === item.startTime },
                                         ]"
-                                        @dragover="handleDragOver($event, block.time)"
+                                        @dragover="handleDragOver($event, item.startTime)"
                                         @dragleave="handleDragLeave"
-                                        @drop="handleDrop($event, block.time)"
+                                        @drop="handleDrop($event, item.startTime)"
                                     >
                                         <div class="slot-time">
-                                            {{ block.time }}
+                                            {{ item.startTime }}-{{ item.endTime }}
                                         </div>
-                                        <a-tag :color="getSlotTagColor((block.data as any).status)">
-                                            {{ getSlotStatusText((block.data as any).status) }}
+
+                                        <a-tag :color="getSlotTagColor((item.data as any).status)">
+                                            {{ getSlotStatusText((item.data as any).status) }}
                                         </a-tag>
+
                                         <div
-                                            v-if="(block.data as any).status === ScheduleConstants.SLOT_STATUS_BLOCKED"
+                                            v-if="
+                                                (item.data as any).status ===
+                                                ScheduleConstants.SLOT_STATUS_BLOCKED
+                                            "
                                             class="slot-extra"
                                         >
                                             不可预约
@@ -254,63 +287,96 @@
                         <div v-if="groupedSlots.afternoon.length" class="slot-section">
                             <div class="slot-section-header">
                                 <span class="slot-section-title">下午</span>
-                                <span class="slot-section-count">{{ groupedSlots.afternoon.length }} 个时间片</span>
+                                <span class="slot-section-count">
+                                    {{ groupedSlots.afternoon.length }} 个时间片
+                                </span>
                             </div>
+
                             <div class="slot-grid">
-                                <template v-for="block in mergedSchedule.filter(b => {
-                                    const time = b.time;
-                                    if (!time) return false;
-                                    const hour = parseInt(time.split(':')[0], 10);
-                                    return !isNaN(hour) && hour >= 12;
-                                })" :key="block.time">
+                                <template v-for="item in afternoonSlotViews" :key="item.time">
                                     <a-dropdown
-                                        v-if="block.type === 'booking'"
+                                        v-if="item.type === 'booking'"
                                         :trigger="['contextMenu']"
                                         v-model:open="contextMenuVisible"
                                     >
                                         <div
-                                            class="booking-block"
-                                            :class="{ 'booking-dragging': draggingBooking?.bookingNo === (block.data as any)?.bookingNo }"
+                                            class="slot-item booking-slot-piece"
+                                            :class="{
+                                                'booking-slot-start': item.isBookingStart,
+                                                'booking-slot-end': item.isBookingEnd,
+                                                'booking-slot-middle':
+                                                    !item.isBookingStart && !item.isBookingEnd,
+                                                'booking-dragging':
+                                                    draggingBooking?.bookingNo ===
+                                                    (item.booking as any)?.bookingNo,
+                                            }"
+                                            :style="getBookingSlotStyle(item.color)"
                                             draggable="true"
-                                            @click="handleBookingClick(block.data as any)"
-                                            @dragstart="handleDragStart($event, block.data as any)"
+                                            @click="handleBookingClick(item.booking as any)"
+                                            @dragstart="handleDragStart($event, item.booking as any)"
                                             @dragend="handleDragEnd"
                                         >
-                                            <div class="booking-time">
-                                                {{ block.time }} - {{ (block.data as any).endTime || '-' }}
+                                            <div class="booking-piece-time">
+                                                <template v-if="item.isBookingStart">
+                                                    {{ (item.booking as any).startTime || item.startTime }}
+                                                    -
+                                                    {{ (item.booking as any).endTime || item.endTime }}
+                                                </template>
+
+                                                <template v-else>
+                                                    {{ item.startTime }}-{{ item.endTime }}
+                                                </template>
                                             </div>
-                                            <a-tag color="blue">{{ (block.data as any).memberName || '未知会员' }}</a-tag>
-                                            <div class="booking-info">
-                                                <span>{{ (block.data as any).packageName || '-' }}</span>
+
+                                            <div v-if="item.isBookingStart" class="booking-piece-main">
+                                                {{ (item.booking as any).memberName || '未知会员' }}
+                                            </div>
+
+                                            <div v-if="item.isBookingStart" class="booking-piece-sub">
+                                                {{ (item.booking as any).packageName || '-' }}
+                                            </div>
+
+                                            <div v-else class="booking-piece-sub">
+                                                占用中
                                             </div>
                                         </div>
+
                                         <template #overlay>
                                             <a-menu @click="closeContextMenu">
-                                                <a-menu-item key="delete" @click="handleDeleteBooking(block.data as any)">
+                                                <a-menu-item
+                                                    key="delete"
+                                                    @click="handleDeleteBooking(item.booking as any)"
+                                                >
                                                     删除预约
                                                 </a-menu-item>
                                             </a-menu>
                                         </template>
                                     </a-dropdown>
+
                                     <div
                                         v-else
                                         class="slot-item"
                                         :class="[
-                                            getSlotClass((block.data as any).status),
-                                            { 'slot-drop-target': dragOverSlot === block.time }
+                                            getSlotClass((item.data as any).status),
+                                            { 'slot-drop-target': dragOverSlot === item.startTime },
                                         ]"
-                                        @dragover="handleDragOver($event, block.time)"
+                                        @dragover="handleDragOver($event, item.startTime)"
                                         @dragleave="handleDragLeave"
-                                        @drop="handleDrop($event, block.time)"
+                                        @drop="handleDrop($event, item.startTime)"
                                     >
                                         <div class="slot-time">
-                                            {{ block.time }}
+                                            {{ item.startTime }}-{{ item.endTime }}
                                         </div>
-                                        <a-tag :color="getSlotTagColor((block.data as any).status)">
-                                            {{ getSlotStatusText((block.data as any).status) }}
+
+                                        <a-tag :color="getSlotTagColor((item.data as any).status)">
+                                            {{ getSlotStatusText((item.data as any).status) }}
                                         </a-tag>
+
                                         <div
-                                            v-if="(block.data as any).status === ScheduleConstants.SLOT_STATUS_BLOCKED"
+                                            v-if="
+                                                (item.data as any).status ===
+                                                ScheduleConstants.SLOT_STATUS_BLOCKED
+                                            "
                                             class="slot-extra"
                                         >
                                             不可预约
@@ -327,22 +393,33 @@
                         width="500px"
                         @cancel="bookingDetailVisible = false"
                     >
-                        <a-descriptions bordered size="small" :column="2" v-if="selectedBooking">
+                        <a-descriptions
+                            v-if="selectedBooking"
+                            bordered
+                            size="small"
+                            :column="2"
+                        >
                             <a-descriptions-item label="会员姓名">
                                 {{ selectedBooking.memberName || '-' }}
                             </a-descriptions-item>
+
                             <a-descriptions-item label="预约时间">
-                                {{ selectedBooking.startTime || '-' }} - {{ selectedBooking.endTime || '-' }}
+                                {{ selectedBooking.startTime || '-' }} -
+                                {{ selectedBooking.endTime || '-' }}
                             </a-descriptions-item>
+
                             <a-descriptions-item label="预约号">
                                 {{ selectedBooking.bookingNo || '-' }}
                             </a-descriptions-item>
+
                             <a-descriptions-item label="课程名称">
                                 {{ selectedBooking.packageName || '-' }}
                             </a-descriptions-item>
+
                             <a-descriptions-item label="时长">
                                 {{ selectedBooking.duration || 0 }} 分钟
                             </a-descriptions-item>
+
                             <a-descriptions-item label="状态">
                                 <a-tag color="blue">已预约</a-tag>
                             </a-descriptions-item>
@@ -383,7 +460,6 @@ import {
     Empty as AEmpty,
     Form as AForm,
     InputNumber as AInputNumber,
-    List as AList,
     Menu as AMenu,
     Modal as AModal,
     Space as ASpace,
@@ -399,13 +475,35 @@ import {computed, defineComponent, h, onMounted, reactive, ref} from 'vue';
 const AFormItem = AForm.Item;
 const ARangePicker = ADatePicker.RangePicker;
 const ADescriptionsItem = ADescriptions.Item;
-const AListItem = AList.Item;
-const AListItemMeta = AList.Item.Meta;
 const AMenuItem = AMenu.Item;
 
 interface ScheduleTableRow extends CoachScheduleRowVO {
     [key: string]: unknown;
 }
+
+interface SlotViewItem {
+    type: 'booking' | 'slot';
+    time: string;
+    startTime: string;
+    endTime: string;
+    data: Record<string, unknown>;
+    booking?: Record<string, unknown>;
+    bookingId?: string;
+    color?: string;
+    isBookingStart?: boolean;
+    isBookingEnd?: boolean;
+}
+
+const BOOKING_COLORS = [
+    '#1677ff',
+    '#722ed1',
+    '#eb2f96',
+    '#fa8c16',
+    '#13c2c2',
+    '#52c41a',
+    '#2f54eb',
+    '#fa541c',
+];
 
 const loading = ref(false);
 const detailLoading = ref(false);
@@ -418,8 +516,6 @@ const selectedDay = ref<CoachDayScheduleVO | null>(null);
 const selectedBooking = ref<Record<string, unknown> | null>(null);
 const bookingDetailVisible = ref(false);
 const contextMenuVisible = ref(false);
-const contextMenuPosition = reactive({ x: 0, y: 0 });
-const contextMenuBooking = ref<Record<string, unknown> | null>(null);
 const draggingBooking = ref<Record<string, unknown> | null>(null);
 const dragOverSlot = ref<string | null>(null);
 
@@ -487,8 +583,8 @@ const groupedSlots = computed(() => {
     const afternoon: typeof selectedDay.value.slots = [];
 
     for (const slot of selectedDay.value.slots) {
-        const timeStr = slot.slot || '';
-        const hourStr = timeStr.split(':')[0];
+        const startTime = getSlotStartTime(slot as Record<string, unknown>);
+        const hourStr = startTime.split(':')[0];
         const hour = parseInt(hourStr, 10);
 
         if (!isNaN(hour) && hour < 12) {
@@ -501,50 +597,27 @@ const groupedSlots = computed(() => {
     return {morning, afternoon};
 });
 
-interface TimeBlock {
-    type: 'booking' | 'slot';
-    time: string;
-    endTime?: string;
-    data: Record<string, unknown>;
-    span?: number;
-}
+const morningSlotViews = computed<SlotViewItem[]>(() => {
+    return buildSlotViews(
+        groupedSlots.value.morning as Record<string, unknown>[],
+    );
+});
 
-const mergedSchedule = computed(() => {
-    const result: TimeBlock[] = [];
-    const slots = selectedDay.value?.slots || [];
-    const bookings = selectedDay.value?.bookings || [];
-    const bookingMap = new Map<string, typeof bookings[0]>();
-
-    for (const booking of bookings) {
-        const key = booking.startTime || '';
-        bookingMap.set(key, booking);
-    }
-
-    for (const slot of slots) {
-        const booking = bookingMap.get(slot.slot || '');
-        if (booking) {
-            result.push({
-                type: 'booking',
-                time: slot.slot || '',
-                endTime: booking.endTime,
-                data: booking,
-            });
-        } else {
-            result.push({
-                type: 'slot',
-                time: slot.slot || '',
-                data: slot,
-            });
-        }
-    }
-
-    return result.sort((a, b) => a.time.localeCompare(b.time));
+const afternoonSlotViews = computed<SlotViewItem[]>(() => {
+    return buildSlotViews(
+        groupedSlots.value.afternoon as Record<string, unknown>[],
+    );
 });
 
 /**
  * 单元格组件。
  *
- * 使用内部组件可以避免模板里重复写太多判断逻辑。
+ * 当前展示内容：
+ * 1. 当日预约数量
+ * 2. 当日工作时间
+ *
+ * 状态不再通过“正常 / 可 / 约 / 锁”等文案表达，
+ * 而是通过 day-normal / day-booked / day-leave / day-rest / day-empty 的颜色区分。
  */
 const ScheduleDayCell = defineComponent({
     name: 'ScheduleDayCell',
@@ -566,7 +639,10 @@ const ScheduleDayCell = defineComponent({
                         class: ['day-cell', 'day-empty'],
                         onClick: () => emit('click'),
                     },
-                    '—',
+                    [
+                        h('div', {class: 'day-booking-count'}, '0 个预约'),
+                        h('div', {class: 'work-time'}, '-'),
+                    ],
                 );
             }
 
@@ -577,31 +653,27 @@ const ScheduleDayCell = defineComponent({
                         class: ['day-cell', 'day-empty'],
                         onClick: () => emit('click'),
                     },
-                    '无排班',
+                    [
+                        h('div', {class: 'day-booking-count'}, '0 个预约'),
+                        h('div', {class: 'work-time'}, '-'),
+                    ],
                 );
             }
 
-            if (day.isRestDay === ScheduleConstants.REST_DAY_YES) {
-                return h(
-                    'div',
-                    {
-                        class: ['day-cell', 'day-rest'],
-                        onClick: () => emit('click'),
-                    },
-                    '休息',
-                );
-            }
+            const isRestDay = day.isRestDay === ScheduleConstants.REST_DAY_YES;
 
             const isLeave =
                 day.isLeave === ScheduleConstants.SCHEDULE_STATUS_LEAVE;
 
             const cls = [
                 'day-cell',
-                isLeave
-                    ? 'day-leave'
-                    : day.bookedSlots > 0
-                        ? 'day-booked'
-                        : 'day-normal',
+                isRestDay
+                    ? 'day-rest'
+                    : isLeave
+                        ? 'day-leave'
+                        : day.bookedSlots > 0
+                            ? 'day-booked'
+                            : 'day-normal',
             ];
 
             return h(
@@ -611,35 +683,16 @@ const ScheduleDayCell = defineComponent({
                     onClick: () => emit('click'),
                 },
                 [
-                    h('div', {class: 'day-header'}, [
-                        isLeave
-                            ? h('span', {class: 'leave-label'}, '请假')
-                            : h('span', {class: 'normal-label'}, '正常'),
-                        h('span', {class: 'work-time'}, formatWorkTime(day)),
-                    ]),
-
-                    h('div', {class: 'day-stats'}, [
-                        h(
-                            'span',
-                            {class: 'stat stat-available'},
-                            `可 ${day.availableSlots || 0}`,
-                        ),
-                        h(
-                            'span',
-                            {class: 'stat stat-booked'},
-                            `约 ${day.bookedSlots || 0}`,
-                        ),
-                        h(
-                            'span',
-                            {class: 'stat stat-blocked'},
-                            `锁 ${day.blockedSlots || 0}`,
-                        ),
-                    ]),
-
                     h(
                         'div',
                         {class: 'day-booking-count'},
                         `${day.bookings?.length || 0} 个预约`,
+                    ),
+
+                    h(
+                        'div',
+                        {class: 'work-time'},
+                        formatWorkTime(day),
                     ),
                 ],
             );
@@ -699,6 +752,178 @@ function formatWorkTime(day?: CoachDayScheduleVO | null) {
     )}`;
 }
 
+function parseSlotRange(slot?: string) {
+    if (!slot) {
+        return {
+            startTime: '',
+            endTime: '',
+        };
+    }
+
+    const [startTime = '', endTime = ''] = slot.split('-');
+
+    return {
+        startTime: normalizeTime(startTime),
+        endTime: normalizeTime(endTime),
+    };
+}
+
+function getSlotStartTime(slot: Record<string, unknown>) {
+    const startTime = normalizeTime(slot.startTime as string | undefined);
+
+    if (startTime) {
+        return startTime;
+    }
+
+    return parseSlotRange(slot.slot as string | undefined).startTime;
+}
+
+function getSlotEndTime(slot: Record<string, unknown>) {
+    const endTime = normalizeTime(slot.endTime as string | undefined);
+
+    if (endTime) {
+        return endTime;
+    }
+
+    return parseSlotRange(slot.slot as string | undefined).endTime;
+}
+
+function getSlotDisplayTime(slot: Record<string, unknown>) {
+    const startTime = getSlotStartTime(slot);
+    const endTime = getSlotEndTime(slot);
+
+    if (startTime && endTime) {
+        return `${startTime}-${endTime}`;
+    }
+
+    return String(slot.slot || '');
+}
+
+function buildBookingMap() {
+    const bookings = (selectedDay.value?.bookings || []) as Record<
+        string,
+        unknown
+    >[];
+
+    const map = new Map<string, Record<string, unknown>>();
+
+    for (const booking of bookings) {
+        const bookingId = booking.bookingId ? String(booking.bookingId) : '';
+        const bookingNo = booking.bookingNo ? String(booking.bookingNo) : '';
+
+        if (bookingId) {
+            map.set(bookingId, booking);
+        }
+
+        if (bookingNo) {
+            map.set(bookingNo, booking);
+        }
+    }
+
+    return map;
+}
+
+function getBookingColor(index: number) {
+    return BOOKING_COLORS[index % BOOKING_COLORS.length];
+}
+
+function getBookingSlotStyle(color?: string) {
+    return {
+        '--booking-color': color || BOOKING_COLORS[0],
+    };
+}
+
+function buildSlotViews(slots: Record<string, unknown>[]): SlotViewItem[] {
+    const bookingMap = buildBookingMap();
+
+    const bookingIds = Array.from(
+        new Set(
+            slots
+                .filter((slot) => {
+                    return (
+                        slot.status === ScheduleConstants.SLOT_STATUS_BOOKED &&
+                        (slot.bookingId || slot.bookingNo)
+                    );
+                })
+                .map((slot) => String(slot.bookingId || slot.bookingNo)),
+        ),
+    );
+
+    const bookingColorMap = new Map<string, string>();
+
+    bookingIds.forEach((bookingId, index) => {
+        bookingColorMap.set(bookingId, getBookingColor(index));
+    });
+
+    const result: SlotViewItem[] = slots.map((slot) => {
+        const startTime = getSlotStartTime(slot);
+        const endTime = getSlotEndTime(slot);
+        const time = getSlotDisplayTime(slot);
+
+        const rawBookingId = slot.bookingId || slot.bookingNo;
+        const bookingId = rawBookingId ? String(rawBookingId) : '';
+
+        const isBooked =
+            slot.status === ScheduleConstants.SLOT_STATUS_BOOKED && bookingId;
+
+        if (!isBooked) {
+            return {
+                type: 'slot',
+                time,
+                startTime,
+                endTime,
+                data: slot,
+            };
+        }
+
+        const booking =
+            bookingMap.get(bookingId) ||
+            ({
+                bookingId: slot.bookingId,
+                bookingNo: slot.bookingNo,
+                memberId: slot.memberId,
+                memberName: slot.memberName,
+                packageName: slot.packageName,
+                startTime,
+                endTime,
+            } as Record<string, unknown>);
+
+        return {
+            type: 'booking',
+            time,
+            startTime,
+            endTime,
+            data: slot,
+            booking,
+            bookingId,
+            color: bookingColorMap.get(bookingId),
+        };
+    });
+
+    const bookingSlotMap = new Map<string, SlotViewItem[]>();
+
+    for (const item of result) {
+        if (item.type !== 'booking' || !item.bookingId) {
+            continue;
+        }
+
+        const list = bookingSlotMap.get(item.bookingId) || [];
+        list.push(item);
+        bookingSlotMap.set(item.bookingId, list);
+    }
+
+    for (const [, items] of bookingSlotMap) {
+        items.sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+        items.forEach((item, index) => {
+            item.isBookingStart = index === 0;
+            item.isBookingEnd = index === items.length - 1;
+        });
+    }
+
+    return result.sort((a, b) => a.startTime.localeCompare(b.startTime));
+}
+
 function getSlotTagColor(status?: string) {
     if (status === ScheduleConstants.SLOT_STATUS_AVAILABLE) {
         return 'green';
@@ -738,11 +963,6 @@ function handleBookingClick(booking: Record<string, unknown>) {
     bookingDetailVisible.value = true;
 }
 
-function handleBookingContextMenu(e: MouseEvent, booking: Record<string, unknown>) {
-    e.preventDefault();
-    contextMenuBooking.value = booking;
-}
-
 function closeContextMenu() {
     contextMenuVisible.value = false;
 }
@@ -751,6 +971,7 @@ async function handleDeleteBooking(booking: Record<string, unknown>) {
     if (!booking) return;
 
     const bookingNo = booking.bookingNo as string | undefined;
+
     if (!bookingNo) {
         message.warning('预约号为空');
         return;
@@ -766,6 +987,7 @@ async function handleDeleteBooking(booking: Record<string, unknown>) {
 
 function handleDragStart(e: DragEvent, booking: Record<string, unknown>) {
     draggingBooking.value = booking;
+
     if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = 'move';
     }
@@ -791,6 +1013,7 @@ function handleDrop(e: DragEvent, targetSlotTime: string) {
     if (!draggingBooking.value) return;
 
     const originalTime = draggingBooking.value.startTime;
+
     if (originalTime === targetSlotTime) {
         draggingBooking.value = null;
         dragOverSlot.value = null;
@@ -1016,16 +1239,20 @@ onMounted(() => {
 
 /* Day cell */
 .day-cell {
-    min-height: 88px;
-    padding: 8px;
+    display: flex;
+    min-height: 72px;
+    padding: 10px 8px;
     border: 1px solid transparent;
     border-radius: 8px;
     cursor: pointer;
-    transition:
-        transform 0.18s ease,
-        box-shadow 0.18s ease,
-        border-color 0.18s ease,
-        background-color 0.18s ease;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .day-cell:hover {
@@ -1035,9 +1262,6 @@ onMounted(() => {
 
 .day-empty,
 .day-rest {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     color: var(--sv-empty-text);
     background: var(--sv-empty-bg);
     border-color: var(--sv-empty-border);
@@ -1061,57 +1285,17 @@ onMounted(() => {
     border-color: var(--sv-warn-border);
 }
 
-.day-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-
-.normal-label {
-    font-size: 12px;
+.day-booking-count {
+    font-size: 13px;
     font-weight: 600;
-    color: var(--sv-ok-text);
-}
-
-.leave-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--sv-warn-text);
+    line-height: 1.2;
+    color: var(--sv-text);
+    text-align: center;
 }
 
 .work-time {
     font-size: 12px;
-    color: var(--sv-text-secondary);
-}
-
-.day-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    justify-content: center;
-}
-
-.stat {
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.stat-available {
-    color: var(--sv-ok-text);
-}
-
-.stat-booked {
-    color: var(--sv-book-text);
-}
-
-.stat-blocked {
-    color: var(--sv-warn-text);
-}
-
-.day-booking-count {
-    margin-top: 8px;
-    font-size: 12px;
+    line-height: 1.2;
     color: var(--sv-text-secondary);
     text-align: center;
 }
@@ -1197,7 +1381,7 @@ onMounted(() => {
 .slot-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
 }
 
 .slot-available {
@@ -1252,8 +1436,8 @@ onMounted(() => {
 }
 
 .slot-section-title {
-    font-weight: 600;
     font-size: 14px;
+    font-weight: 600;
 }
 
 .slot-section-count {
@@ -1269,10 +1453,9 @@ onMounted(() => {
     border: 1px solid var(--sv-border);
     border-radius: 8px;
     cursor: pointer;
-    transition:
-        transform 0.18s ease,
-        box-shadow 0.18s ease,
-        border-color 0.18s ease;
+    transition: transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .slot-item:hover {
@@ -1287,35 +1470,118 @@ onMounted(() => {
     background: color-mix(in srgb, #1677ff 8%, var(--sv-bg-card));
 }
 
+/* Booking occupied slot pieces */
+.booking-slot-piece {
+    position: relative;
+    overflow: hidden;
+    color: var(--sv-text);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--booking-color) 28%, var(--sv-bg-card)) 0%,
+        color-mix(in srgb, var(--booking-color) 14%, var(--sv-bg-card)) 100%
+    );
+    border-color: color-mix(in srgb, var(--booking-color) 60%, var(--sv-border));
+    box-shadow: inset 4px 0 0 var(--booking-color);
+}
+
+.booking-slot-piece::before {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    content: '';
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--booking-color) 10%, transparent),
+        transparent 58%
+    );
+}
+
+.booking-slot-piece:hover {
+    border-color: var(--booking-color);
+    box-shadow: inset 4px 0 0 var(--booking-color),
+    0 6px 18px color-mix(in srgb, var(--booking-color) 28%, transparent);
+}
+
+.booking-slot-start {
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.booking-slot-middle {
+    opacity: 0.92;
+}
+
+.booking-slot-end {
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+.booking-piece-time {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--sv-text);
+}
+
+.booking-piece-main {
+    position: relative;
+    z-index: 1;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sv-text);
+}
+
+.booking-piece-sub {
+    position: relative;
+    z-index: 1;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--sv-text-secondary);
+}
+
+.booking-slot-piece.booking-dragging {
+    opacity: 0.7;
+    transform: scale(1.04);
+    box-shadow: inset 4px 0 0 var(--booking-color),
+    0 8px 24px color-mix(in srgb, var(--booking-color) 36%, transparent);
+}
+
+/* Legacy booking block styles: retained for compatibility */
 .booking-block {
     min-height: 92px;
     padding: 10px;
     color: var(--sv-text);
-    background: linear-gradient(135deg, var(--sv-book-bg) 0%, color-mix(in srgb, #1677ff 20%, var(--sv-bg-card)) 100%);
+    background: linear-gradient(
+        135deg,
+        var(--sv-book-bg) 0%,
+        color-mix(in srgb, #1677ff 20%, var(--sv-bg-card)) 100%
+    );
     border: 2px solid var(--sv-book-border);
     border-radius: 8px;
     cursor: pointer;
-    transition:
-        transform 0.18s ease,
-        box-shadow 0.18s ease,
-        border-color 0.18s ease;
+    transition: transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .booking-block:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(22, 119, 255, 0.3);
+    box-shadow: 0 6px 20px rgb(22 119 255 / 30%);
     border-color: #40a9ff;
 }
 
-.booking-block.dragging {
+.booking-block.dragging,
+.booking-block.booking-dragging {
     opacity: 0.7;
     transform: scale(1.05);
-    box-shadow: 0 8px 24px rgba(22, 119, 255, 0.4);
+    box-shadow: 0 8px 24px rgb(22 119 255 / 40%);
 }
 
 .booking-block .booking-time {
-    font-weight: 600;
     margin-bottom: 6px;
+    font-weight: 600;
 }
 
 .booking-block .booking-info {
@@ -1340,5 +1606,3 @@ onMounted(() => {
     }
 }
 </style>
-
-

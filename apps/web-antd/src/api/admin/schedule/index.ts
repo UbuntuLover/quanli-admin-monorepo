@@ -42,10 +42,8 @@ export interface CoachDayScheduleVO {
     workStartTime?: string;
     workEndTime?: string;
 
-    /**
-     * 是否休息日：
-     * 0-否，1-是
-     */
+    slotIntervalMinutes?: number;
+
     isRestDay?: number;
 
     /**
@@ -67,8 +65,8 @@ export interface CoachDayScheduleVO {
     bookedSlots: number;
     blockedSlots: number;
 
-    bookings: AdminScheduleBookingVO[];
-    slots: AdminScheduleSlotVO[];
+    bookings?: AdminScheduleBookingVO[];
+    slots?: AdminScheduleSlotVO[];
 }
 
 /**
@@ -76,7 +74,9 @@ export interface CoachDayScheduleVO {
  */
 export interface AdminScheduleSlotVO {
     slot?: string;
-    status?: 'available' | 'booked' | 'blocked' | string;
+    startTime?: string;
+    endTime?: string;
+    status?: string;
     bookingId?: number;
     bookingNo?: string;
     memberId?: string;
