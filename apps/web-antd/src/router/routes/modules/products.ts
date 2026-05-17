@@ -18,8 +18,34 @@ const routes: RouteRecordRaw[] = [
                 meta: {
                     title: $t('products.list'),
                 },
-                component: () => import('#/views/products/index.vue'),
-            }
+                component: () => import('#/views/products/list/index.vue'),
+            },
+            {
+                path: 'create',
+                name: 'ProductCreate',
+                component: () => import('#/views/products/create/index.vue'),
+                meta: {
+                    title: '新建商品',
+                },
+            },
+            {
+                path: 'detail/:id',
+                name: 'ProductDetail',
+                component: () => import('#/views/products/detail/index.vue'),
+                meta: {
+                    title: '商品详情',
+                    hideInMenu: true,
+                },
+            },
+            {
+                path: 'edit/:id',
+                name: 'ProductEdit',
+                component: () => import('#/views/products/edit/index.vue'),
+                meta: {
+                    title: '编辑商品',
+                    hideInMenu: true,
+                },
+            },
         ]
     }
 ];

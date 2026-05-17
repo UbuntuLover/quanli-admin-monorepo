@@ -1,0 +1,91 @@
+import { requestClient } from '#/api/request';
+
+import type {
+    CategoryDTO,
+    CategoryDeletePreviewDTO,
+    CreateCategoryRequest,
+    MoveCategoryProductsRequest,
+    UpdateCategoryRequest,
+} from '#/types/category';
+
+/**
+ * 获取分类树。
+ */
+export function getCategoryTreeApi() {
+    return requestClient.get<CategoryDTO[]>('/api/product-categories/tree');
+}
+
+/**
+ * 获取所有分类。
+ */
+export function getAllCategoriesApi() {
+    return requestClient.get<CategoryDTO[]>('/api/product-categories');
+}
+
+/**
+ * 获取分类详情。
+ */
+export function getCategoryDetailApi(id: number) {
+    return requestClient.get<CategoryDTO>(`/api/product-categories/${id}`);
+}
+
+/**
+ * 获取子分类。
+ */
+export function getSubCategoriesApi(parentId: number) {
+    return requestClient.get<CategoryDTO[]>(
+        `/api/product-categories/${parentId}/children`,
+    );
+}
+
+/**
+ * 获取所有三级分类。
+ *
+ * 创建商品时建议只允许选择三级分类。
+ */
+export function getLeafCategoriesApi() {
+    return requestClient.get<CategoryDTO[]>('/api/product-categories/leaf');
+}
+
+/**
+ * 创建分类。
+ */
+export function createCategoryApi(data: CreateCategoryRequest) {
+    return requestClient.post<CategoryDTO>('/api/product-categories/create', data);
+}
+
+/**
+ * 更新分类。
+ */
+export function updateCategoryApi(id: number, data: UpdateCategoryRequest) {
+    return requestClient.put<CategoryDTO>(`/api/product-categories/${id}`, data);
+}
+
+/**
+ * 删除分类。
+ */
+export function deleteCategoryApi(id: number) {
+    return requestClient.delete<boolean>(`/api/product-categories/${id}`);
+}
+
+/**
+ * 删除分类前预览影响范围。
+ */
+export function previewDeleteCategoryApi(id: number) {
+    return requestClient.get<CategoryDeletePreviewDTO>(
+        `/api/product-categories/${id}/delete-preview`,
+    );
+}
+
+/**
+ * 迁移分类下商品。
+ */
+export function moveCategoryProductsApi(
+    sourceCategoryId: number,
+    data: MoveCategoryProductsRequest,
+) {
+    return requestClient.post<number>(
+        `/api/product-categories/${sourceCategoryId}/move-products`,
+        data,
+    );
+}
