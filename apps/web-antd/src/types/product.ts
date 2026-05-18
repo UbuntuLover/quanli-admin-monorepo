@@ -1,5 +1,5 @@
 export interface ProductQueryDTO {
-    categoryId?: number;
+    categoryId?: string;
     brandId?: number;
     name?: string;
     minPrice?: number;

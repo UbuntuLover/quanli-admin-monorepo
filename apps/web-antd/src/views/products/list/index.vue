@@ -38,7 +38,7 @@
                     </a-col>
 
                     <a-col :xs="24" :sm="12" :md="8" :lg="5">
-                        <a-form-item label="三级分类">
+                        <a-form-item label="分类（请选择到三级分类）">
                             <a-cascader
                                 v-model:value="categoryPath"
                                 :options="categoryOptions"
@@ -328,7 +328,7 @@ const productList = ref<ProductListDTO[]>([]);
 const total = ref(0);
 
 const categoryTree = ref<CategoryDTO[]>([]);
-const categoryPath = ref<number[]>([]);
+const categoryPath = ref<string[]>([]);
 
 const minPriceYuan = ref<number | undefined>();
 const maxPriceYuan = ref<number | undefined>();
@@ -448,8 +448,9 @@ function convertCategoryToOptions(categories: CategoryDTO[]): CascaderOption[] {
                 ? convertCategoryToOptions(item.children)
                 : undefined;
 
+
         return {
-            value: Number(item.id),
+            value: String(item.id),
             label: item.name,
             children,
             disabled: item.status !== 'ACTIVE',
@@ -458,11 +459,12 @@ function convertCategoryToOptions(categories: CategoryDTO[]): CascaderOption[] {
 }
 
 function handleCategoryChange(value: Array<number | string>) {
-    const values = (value || []).map((item) => Number(item));
+    const values = (value || []).map((item) => String(item));
     categoryPath.value = values;
 
     queryForm.categoryId =
         values.length > 0 ? values[values.length - 1] : undefined;
+
 }
 
 function handleSortChange(value: string) {

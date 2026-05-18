@@ -10,7 +10,7 @@ export interface CategoryDTO {
 }
 
 export interface CascaderOption {
-    value: number;
+    value: string;
     label: string;
     children?: CascaderOption[];
     disabled?: boolean;
