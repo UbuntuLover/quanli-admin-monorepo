@@ -13,7 +13,7 @@ const routes: RouteRecordRaw[] = [
         children: [
             {
                 name: 'ProductsList',
-                path: '/list',
+                path: 'list',
                 icon: 'material-symbols:production-quantity-limits-sharp',
                 meta: {
                     title: $t('products.list'),

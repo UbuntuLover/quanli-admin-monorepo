@@ -179,9 +179,14 @@
                             />
 
                             <div class="product-info">
-                                <div class="product-name">
+                                <a-button
+                                    type="link"
+                                    class="product-name-link"
+                                    @click="handleDetail(record)"
+                                >
                                     {{ record.name }}
-                                </div>
+                                </a-button>
+
 
                                 <div class="product-no">
                                     编号：{{ record.productNo }}
@@ -523,11 +528,16 @@ function handleCreatePackageProduct() {
 }
 
 function handleDetail(record: ProductListDTO) {
-    router.push(`/product/detail/${record.id}`);
+    router.push({
+        name: 'ProductDetail',
+        params: {
+            id: record.id,
+        },
+    });
 }
 
 function handleEdit(record: ProductListDTO) {
-    router.push(`/product/edit/${record.id}`);
+    router.push(`/products/edit/${record.id}`);
 }
 
 async function handleChangeStatus(record: ProductListDTO, status: string) {
@@ -670,6 +680,27 @@ function getStatusText(status: string) {
     font-size: 12px;
     color: var(--sv-text-secondary);
 }
+
+.product-name-link {
+    max-width: 250px;
+    padding: 0 !important;
+    font-weight: 500;
+    color: var(--sv-text);
+    text-align: left;
+}
+
+.product-name-link :deep(span) {
+    display: inline-block;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.product-name-link:hover {
+    color: #1677ff;
+}
+
 
 .product-subtitle {
     max-width: 250px;
