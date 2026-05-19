@@ -74,6 +74,12 @@ export function getFileDetailApi(fileId: number) {
     return requestClient.get<SysFileVO>(`/api/file/${fileId}`);
 }
 
-export function getFilePreviewApi(fileId: number) {
-    return requestClient.get<{ fileId: number; previewUrl: string }>(`/api/file/${fileId}/preview`);
+export function getFilePreviewApi(fileId: number, w?: number, h?: number) {
+    const query: string[] = [];
+    if (w) query.push(`w=${w}`);
+    if (h) query.push(`h=${h}`);
+    const qs = query.length ? `?${query.join('&')}` : '';
+    return requestClient.get<{ fileId: number; previewUrl: string; thumbUrl: string; expireAt: number }>(
+        `/api/file/${fileId}/preview${qs}`,
+    );
 }

@@ -6,8 +6,8 @@
                     <a-space>
                         <a-button @click="handleBack">返回</a-button>
                         <span>商品详情</span>
-                        <a-tag :color="getStatusColor(product?.status)">
-                            {{ getStatusText(product?.status) }}
+                        <a-tag :color="getStatusColor(viewProduct?.status)">
+                            {{ getStatusText(viewProduct?.status) }}
                         </a-tag>
                     </a-space>
                 </div>
@@ -16,23 +16,22 @@
             <template #extra>
                 <a-space>
                     <a-button @click="handleRefresh" :loading="loading">刷新</a-button>
-                    <a-button type="primary" @click="handleEdit" :disabled="!product?.id">
+                    <a-button type="primary" @click="handleEdit" :disabled="!viewProduct?.id">
                         编辑商品
                     </a-button>
                 </a-space>
             </template>
 
             <a-spin :spinning="loading">
-                <a-empty v-if="!product" description="暂无商品数据" />
+                <a-empty v-if="!viewProduct" description="暂无商品数据" />
                 <template v-else>
-                    <!-- 基础信息 -->
                     <a-card size="small" title="基础信息" class="section-card">
                         <a-row :gutter="16">
                             <a-col :xs="24" :md="8">
                                 <div class="cover-box">
                                     <a-image
-                                        :src="product.mainImage || fallbackImage"
-                                        :preview="!!product.mainImage"
+                                        :src="mainImageThumb || fallbackImage"
+                                        :preview="mainImagePreview ? { src: mainImagePreview } : false"
                                         class="main-image"
                                     />
                                 </div>
@@ -40,87 +39,58 @@
 
                             <a-col :xs="24" :md="16">
                                 <a-descriptions bordered :column="2" size="small">
-                                    <a-descriptions-item label="商品ID">
-                                        {{ product.id }}
-                                    </a-descriptions-item>
-                                    <a-descriptions-item label="商品编号">
-                                        {{ product.productNo || '-' }}
-                                    </a-descriptions-item>
-
-                                    <a-descriptions-item label="商品名称">
-                                        {{ product.name || '-' }}
-                                    </a-descriptions-item>
-                                    <a-descriptions-item label="副标题">
-                                        {{ product.subtitle || '-' }}
-                                    </a-descriptions-item>
-
-                                    <a-descriptions-item label="分类">
-                                        {{ product.categoryName || product.categoryId || '-' }}
-                                    </a-descriptions-item>
-                                    <a-descriptions-item label="品牌">
-                                        {{ product.brandName || product.brandId || '-' }}
-                                    </a-descriptions-item>
-
-                                    <a-descriptions-item label="商品类型">
-                                        {{ getProductTypeText(product.productType) }}
-                                    </a-descriptions-item>
-                                    <a-descriptions-item label="权益类型">
-                                        {{ product.benefitType || '-' }}
-                                    </a-descriptions-item>
-
-                                    <a-descriptions-item label="履约方式">
-                                        {{ translateDeliveryMode(product.deliveryMode) || '-' }}
-                                    </a-descriptions-item>
-                                    <a-descriptions-item label="销量">
-                                        {{ product.sales ?? 0 }}
-                                    </a-descriptions-item>
-
+                                    <a-descriptions-item label="商品ID">{{ viewProduct.id }}</a-descriptions-item>
+                                    <a-descriptions-item label="商品编号">{{ viewProduct.productNo || '-' }}</a-descriptions-item>
+                                    <a-descriptions-item label="商品名称">{{ viewProduct.name || '-' }}</a-descriptions-item>
+                                    <a-descriptions-item label="副标题">{{ viewProduct.subtitle || '-' }}</a-descriptions-item>
+                                    <a-descriptions-item label="分类">{{ viewProduct.categoryName || viewProduct.categoryId || '-' }}</a-descriptions-item>
+                                    <a-descriptions-item label="品牌">{{ viewProduct.brandName || viewProduct.brandId || '-' }}</a-descriptions-item>
+                                    <a-descriptions-item label="商品类型">{{ getProductTypeText(viewProduct.productType) }}</a-descriptions-item>
+                                    <a-descriptions-item label="权益类型">{{ viewProduct.benefitType || '-' }}</a-descriptions-item>
+                                    <a-descriptions-item label="履约方式">{{ translateDeliveryMode(viewProduct.deliveryMode) || '-' }}</a-descriptions-item>
+                                    <a-descriptions-item label="销量">{{ viewProduct.sales ?? 0 }}</a-descriptions-item>
                                     <a-descriptions-item label="标签" :span="2">
                                         <a-space>
-                                            <a-tag v-if="product.isNew === 1" color="blue">新品</a-tag>
-                                            <a-tag v-if="product.isHot === 1" color="orange">热销</a-tag>
-                                            <span v-if="product.isNew !== 1 && product.isHot !== 1" class="muted">-</span>
+                                            <a-tag v-if="viewProduct.isNew === 1" color="blue">新品</a-tag>
+                                            <a-tag v-if="viewProduct.isHot === 1" color="orange">热销</a-tag>
+                                            <span v-if="viewProduct.isNew !== 1 && viewProduct.isHot !== 1" class="muted">-</span>
                                         </a-space>
                                     </a-descriptions-item>
-
-                                    <a-descriptions-item label="创建时间" :span="2">
-                                        {{ formatDateTime(product.createdAt) }}
-                                    </a-descriptions-item>
+                                    <a-descriptions-item label="创建时间" :span="2">{{ formatDateTime(viewProduct.createdAt) }}</a-descriptions-item>
                                 </a-descriptions>
                             </a-col>
                         </a-row>
                     </a-card>
 
-                    <!-- 描述 -->
                     <a-card size="small" title="商品描述" class="section-card">
-                        <div class="description-text">
-                            {{ product.description || '暂无描述' }}
-                        </div>
+                        <div class="description-text">{{ viewProduct.description || '暂无描述' }}</div>
                     </a-card>
 
-                    <!-- 图片 -->
                     <a-card size="small" title="商品图片" class="section-card">
-                        <a-empty v-if="!product.images || product.images.length === 0" description="暂无图片" />
-                        <a-image-preview-group v-else>
+                        <a-empty v-if="visibleImages.length === 0" description="暂无图片" />
+                        <AImagePreviewGroup v-else>
                             <a-space wrap>
                                 <a-image
-                                    v-for="(img, idx) in product.images"
-                                    :key="`${img}-${idx}`"
-                                    :src="img"
+                                    v-for="(img, idx) in visibleImages"
+                                    :key="`${img.preview}-${idx}`"
+                                    :src="img.thumb || img.preview"
+                                    :preview="{ src: img.preview }"
                                     :width="96"
                                     :height="96"
                                     class="thumb"
                                 />
                             </a-space>
-                        </a-image-preview-group>
+                        </AImagePreviewGroup>
+                        <div v-if="signedImages.length > visibleImageCount" class="load-more-wrap">
+                            <a-button size="small" @click="loadMoreImages">加载更多图片</a-button>
+                        </div>
                     </a-card>
 
-                    <!-- SKU 列表 -->
                     <a-card size="small" title="SKU 列表" class="section-card">
                         <a-table
                             row-key="id"
                             :columns="skuColumns"
-                            :data-source="product.skus || []"
+                            :data-source="viewProduct.skus || []"
                             :pagination="false"
                             :scroll="{ x: 980 }"
                             size="small"
@@ -128,28 +98,17 @@
                             <template #bodyCell="{ column, record }">
                                 <template v-if="column.key === 'price'">
                                     <span class="price">¥{{ formatMoney(record.price) }}</span>
-                                    <span
-                                        v-if="record.originalPrice && record.originalPrice > record.price"
-                                        class="original-price"
-                                    >
+                                    <span v-if="record.originalPrice && record.originalPrice > record.price" class="original-price">
                     ¥{{ formatMoney(record.originalPrice) }}
                   </span>
                                 </template>
 
                                 <template v-else-if="column.key === 'attributes'">
                                     <a-space wrap>
-                                        <a-tag
-                                            v-for="(val, key) in record.attributes"
-                                            :key="`${record.id}-${key}`"
-                                        >
+                                        <a-tag v-for="(val, key) in record.attributes" :key="`${record.id}-${key}`">
                                             {{ key }}: {{ val }}
                                         </a-tag>
-                                        <span
-                                            v-if="!record.attributes || Object.keys(record.attributes).length === 0"
-                                            class="muted"
-                                        >
-                      -
-                    </span>
+                                        <span v-if="!record.attributes || Object.keys(record.attributes).length === 0" class="muted">-</span>
                                     </a-space>
                                 </template>
 
@@ -161,8 +120,9 @@
 
                                 <template v-else-if="column.key === 'image'">
                                     <a-image
-                                        v-if="record.image"
-                                        :src="record.image"
+                                        v-if="getSkuThumb(record.id)"
+                                        :src="getSkuThumb(record.id)"
+                                        :preview="{ src: getSkuPreview(record.id) }"
                                         :width="40"
                                         :height="40"
                                     />
@@ -196,23 +156,28 @@ import {
 } from 'ant-design-vue';
 
 import { getProductDetailApi } from '#/api/products/product';
+import { getFilePreviewApi } from '#/api/file';
 import type { ProductDTO } from '#/types/product';
 
 const ADescriptionsItem = ADescriptions.Item;
+const AImagePreviewGroup = AImage.PreviewGroup;
 
 const route = useRoute();
 const router = useRouter();
 
 const loading = ref(false);
-const product = ref<ProductDTO | null>(null);
-
+const viewProduct = ref<ProductDTO | null>(null);
 const fallbackImage = 'https://dummyimage.com/240x240/f5f5f5/999999&text=Product';
+const productId = computed(() => String(route.params.id ?? ''));
 
-const productId = computed(() => {
-    const raw = route.params.id;
-    const id = Number(raw);
-    return Number.isFinite(id) ? id : NaN;
-});
+const visibleImageCount = ref(8);
+const signedImages = ref<Array<{ preview: string; thumb: string }>>([]);
+const mainImagePreview = ref('');
+const mainImageThumb = ref('');
+const skuImageMap = ref<Record<string, { preview: string; thumb: string }>>({});
+const lastRefreshAt = ref(0);
+
+const visibleImages = computed(() => signedImages.value.slice(0, visibleImageCount.value));
 
 const skuColumns = [
     { title: 'SKU ID', dataIndex: 'id', key: 'id', width: 90 },
@@ -226,41 +191,186 @@ const skuColumns = [
     { title: '状态', key: 'status', width: 100 },
 ];
 
-onMounted(() => {
-    fetchDetail();
-});
+// session缓存：按 fileId + 尺寸
+const CACHE_KEY = 'file_preview_cache_v2';
+type CacheItem = { previewUrl: string; thumbUrl: string; expireAt: number };
+type CacheMap = Record<string, CacheItem>;
+let cache: CacheMap = loadCache();
+
+// 并发去重
+const inflight = new Map<string, Promise<CacheItem>>();
+
+onMounted(fetchDetail);
+
+function normalizeUrl(url?: string) {
+    return String(url ?? '').trim().replace(/\s+/g, '');
+}
+
+function loadCache(): CacheMap {
+    try {
+        const raw = sessionStorage.getItem(CACHE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw) as CacheMap;
+        const now = Math.floor(Date.now() / 1000);
+        Object.keys(parsed).forEach((k) => {
+            if (!parsed[k] || parsed[k].expireAt <= now) delete parsed[k];
+        });
+        return parsed;
+    } catch {
+        return {};
+    }
+}
+
+function saveCache() {
+    try {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    } catch {
+        // ignore
+    }
+}
+
+function parseFileIdFromUrl(url: string): number | null {
+    const u = normalizeUrl(url);
+    if (!u) return null;
+
+    const mQuery = u.match(/[?&]fileId=(\d+)/i);
+    if (mQuery) return Number(mQuery[1]);
+
+    const mPath = u.match(/\/files?\/(\d+)(?:\/|$|\?)/i);
+    if (mPath) return Number(mPath[1]);
+
+    const mTail = u.match(/\/(\d+)(?:\?.*)?$/);
+    if (mTail) return Number(mTail[1]);
+
+    return null;
+}
+
+async function getSignedPair(fileId: number, w: number, h: number): Promise<CacheItem> {
+    const key = `${fileId}_${w}x${h}`;
+    const now = Math.floor(Date.now() / 1000);
+
+    const c = cache[key];
+    if (c && c.expireAt > now + 30) return c; // 预留30秒
+
+    const running = inflight.get(key);
+    if (running) return running;
+
+    const p = (async () => {
+        const res = await getFilePreviewApi(fileId, w, h);
+        const item: CacheItem = {
+            previewUrl: String(res?.previewUrl || ''),
+            thumbUrl: String(res?.thumbUrl || ''),
+            expireAt: Number(res?.expireAt || now + 600),
+        };
+        cache[key] = item;
+        saveCache();
+        return item;
+    })().finally(() => inflight.delete(key));
+
+    inflight.set(key, p);
+    return p;
+}
+
+async function resolveImageByUrl(url: string, w: number, h: number): Promise<{ preview: string; thumb: string }> {
+    const raw = normalizeUrl(url);
+    if (!raw) return { preview: '', thumb: '' };
+
+    const fileId = parseFileIdFromUrl(raw);
+    if (!fileId) {
+        // 没有fileId无法调用预览接口，兜底
+        return { preview: raw, thumb: raw };
+    }
+
+    try {
+        const pair = await getSignedPair(fileId, w, h);
+        return {
+            preview: pair.previewUrl || raw,
+            thumb: pair.thumbUrl || pair.previewUrl || raw,
+        };
+    } catch {
+        return { preview: raw, thumb: raw };
+    }
+}
 
 async function fetchDetail() {
-    if (!Number.isFinite(productId.value)) {
+    if (!productId.value) {
         message.error('商品ID无效');
         return;
     }
 
     loading.value = true;
     try {
-        const res = await getProductDetailApi(productId.value);
-        product.value = res;
-    } catch (error) {
+        const res = await getProductDetailApi(productId.value as any);
+        const cloned = JSON.parse(JSON.stringify(res)) as ProductDTO;
+        viewProduct.value = cloned;
+
+        // 主图
+        const mainRaw = normalizeUrl((cloned as any).mainImage);
+        if (mainRaw) {
+            const pair = await resolveImageByUrl(mainRaw, 600, 600);
+            mainImagePreview.value = pair.preview;
+            mainImageThumb.value = pair.thumb;
+        } else {
+            mainImagePreview.value = '';
+            mainImageThumb.value = '';
+        }
+
+        // 商品图
+        const imgs = Array.isArray((cloned as any).images) ? (cloned as any).images : [];
+        const signed = await Promise.all(
+            imgs.map((u: string) => resolveImageByUrl(u, 120, 120)),
+        );
+        signedImages.value = signed.filter((x) => x.preview);
+
+        // SKU图
+        const skus = Array.isArray((cloned as any).skus) ? (cloned as any).skus : [];
+        const skuPairs = await Promise.all(
+            skus.map(async (s: any) => {
+                const pair = await resolveImageByUrl(String(s?.image || ''), 80, 80);
+                return { id: String(s.id), pair };
+            }),
+        );
+        const m: Record<string, { preview: string; thumb: string }> = {};
+        skuPairs.forEach(({ id, pair }) => {
+            if (pair.preview) m[id] = pair;
+        });
+        skuImageMap.value = m;
+
+        visibleImageCount.value = 8;
+        lastRefreshAt.value = Date.now();
+    } catch {
         message.error('获取商品详情失败');
     } finally {
         loading.value = false;
     }
 }
 
+function getSkuThumb(id: string | number) {
+    return skuImageMap.value[String(id)]?.thumb || '';
+}
+function getSkuPreview(id: string | number) {
+    return skuImageMap.value[String(id)]?.preview || '';
+}
+
+function loadMoreImages() {
+    visibleImageCount.value += 8;
+}
+
 function handleRefresh() {
+    const now = Date.now();
+    if (now - lastRefreshAt.value < 5000) {
+        message.warning('操作太频繁，请稍后再试');
+        return;
+    }
     fetchDetail();
 }
 
 function translateDeliveryMode(deliveryMode?: string) {
     switch (deliveryMode) {
-        case 'MANUAL_ACTIVATE':
-            return '手动激活';
-        case 'PICKUP':
-            return '自提';
-        case 'DIRECT':
-            return '自动发货';
-        default:
-            return deliveryMode || '-';
+        case 'MANUAL_ACTIVATE': return '手动激活';
+        case 'PICKUP': return '自提';
+        case 'DIRECT': return '自动发货';
+        default: return deliveryMode || '-';
     }
 }
 
@@ -269,8 +379,8 @@ function handleBack() {
 }
 
 function handleEdit() {
-    if (!product.value?.id) return;
-    router.push(`/products/edit/${product.value.id}`);
+    if (!viewProduct.value?.id) return;
+    router.push(`/products/edit/${viewProduct.value.id}`);
 }
 
 function formatMoney(value?: number | null) {
@@ -285,38 +395,27 @@ function formatDateTime(value?: string) {
 
 function getStatusColor(status?: string) {
     switch (status) {
-        case 'ACTIVE':
-            return 'green';
-        case 'INACTIVE':
-            return 'default';
-        case 'SOLD_OUT':
-            return 'orange';
-        default:
-            return 'default';
+        case 'ACTIVE': return 'green';
+        case 'INACTIVE': return 'default';
+        case 'SOLD_OUT': return 'orange';
+        default: return 'default';
     }
 }
 
 function getStatusText(status?: string) {
     switch (status) {
-        case 'ACTIVE':
-            return '在售';
-        case 'INACTIVE':
-            return '下架';
-        case 'SOLD_OUT':
-            return '售罄';
-        default:
-            return status || '-';
+        case 'ACTIVE': return '在售';
+        case 'INACTIVE': return '下架';
+        case 'SOLD_OUT': return '售罄';
+        default: return status || '-';
     }
 }
 
 function getProductTypeText(type?: string) {
     switch (type) {
-        case 'PHYSICAL':
-            return '实体商品';
-        case 'VIRTUAL':
-            return '虚拟权益';
-        default:
-            return type || '-';
+        case 'PHYSICAL': return '实体商品';
+        case 'VIRTUAL': return '虚拟权益';
+        default: return type || '-';
     }
 }
 </script>
@@ -327,26 +426,14 @@ function getProductTypeText(type?: string) {
     padding: 16px;
     color: hsl(var(--foreground));
     background: hsl(var(--background));
-
     --sv-bg-card: hsl(var(--card));
-    --sv-bg-soft: hsl(var(--accent));
     --sv-text: hsl(var(--foreground));
     --sv-text-secondary: hsl(var(--muted-foreground));
     --sv-border: hsl(var(--border));
 }
-
-.detail-card {
-    background: var(--sv-bg-card);
-}
-
-.page-title {
-    color: var(--sv-text);
-}
-
-.section-card {
-    margin-bottom: 16px;
-}
-
+.detail-card { background: var(--sv-bg-card); }
+.page-title { color: var(--sv-text); }
+.section-card { margin-bottom: 16px; }
 .cover-box {
     display: flex;
     align-items: center;
@@ -355,37 +442,18 @@ function getProductTypeText(type?: string) {
     border: 1px solid var(--sv-border);
     border-radius: 8px;
 }
-
-.main-image {
-    border-radius: 8px;
-}
-
-.description-text {
-    color: var(--sv-text);
-    line-height: 1.8;
-    white-space: pre-wrap;
-}
-
-.price {
-    font-weight: 600;
-    color: #f5222d;
-}
-
+.main-image { border-radius: 8px; }
+.description-text { color: var(--sv-text); line-height: 1.8; white-space: pre-wrap; }
+.price { font-weight: 600; color: #f5222d; }
 .original-price {
     margin-left: 8px;
     font-size: 12px;
     color: var(--sv-text-secondary);
     text-decoration: line-through;
 }
-
-.thumb {
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.muted {
-    color: var(--sv-text-secondary);
-}
+.thumb { border-radius: 6px; overflow: hidden; }
+.muted { color: var(--sv-text-secondary); }
+.load-more-wrap { margin-top: 12px; }
 
 :deep(.ant-card-head),
 :deep(.ant-card-body),
