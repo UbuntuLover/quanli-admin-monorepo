@@ -50,7 +50,7 @@ export interface ProductDTO {
     id: number;
     productNo: string;
     name: string;
-    categoryId: number;
+    categoryId: string;
     categoryName?: string;
     brandId?: number;
     brandName?: string;
@@ -106,8 +106,8 @@ export interface CreateProductRequest {
 
 export interface UpdateProductRequest {
     name?: string;
-    categoryId?: number;
-    brandId?: number;
+    categoryId?: string;
+    brandId?: string;
     subtitle?: string;
     description?: string;
     status?: string;

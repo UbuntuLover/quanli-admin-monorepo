@@ -69,7 +69,7 @@
                                     </a-descriptions-item>
 
                                     <a-descriptions-item label="履约方式">
-                                        {{ product.deliveryMode || '-' }}
+                                        {{ translateDeliveryMode(product.deliveryMode) || '-' }}
                                     </a-descriptions-item>
                                     <a-descriptions-item label="销量">
                                         {{ product.sales ?? 0 }}
@@ -249,6 +249,19 @@ async function fetchDetail() {
 
 function handleRefresh() {
     fetchDetail();
+}
+
+function translateDeliveryMode(deliveryMode?: string) {
+    switch (deliveryMode) {
+        case 'MANUAL_ACTIVATE':
+            return '手动激活';
+        case 'PICKUP':
+            return '自提';
+        case 'DIRECT':
+            return '自动发货';
+        default:
+            return deliveryMode || '-';
+    }
 }
 
 function handleBack() {

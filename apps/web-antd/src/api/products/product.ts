@@ -22,7 +22,7 @@ export function getProductListApi(params: ProductQueryDTO) {
 /**
  * 获取商品详情，后台使用。
  */
-export function getProductDetailApi(id: number) {
+export function getProductDetailApi(id: string) {
     return requestClient.get<ProductDTO>(`/api/products/${id}`);
 }
 
@@ -45,7 +45,7 @@ export function createProductApi(data: CreateProductRequest) {
 /**
  * 更新商品。
  */
-export function updateProductApi(id: number, data: UpdateProductRequest) {
+export function updateProductApi(id: string, data: UpdateProductRequest) {
     return requestClient.put<ProductDTO>(`/api/products/${id}`, data);
 }
 
