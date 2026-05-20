@@ -115,6 +115,7 @@ export interface UpdateProductRequest {
     isHot?: number;
     mainImage?: string;
     videoUrl?: string;
+    images?: string[];
 }
 
 export interface ProductAttributeDTO {

@@ -71,6 +71,52 @@
                             </a-form-item>
                         </a-col>
 
+                        <!-- 主图预览 -->
+                        <a-col :xs="24">
+                            <a-form-item label="主图预览" required>
+                                <div class="main-image-box">
+                                    <div v-if="!mainImageUrl" class="upload-trigger main-upload-trigger" @click="triggerMainImageUpload">
+                                        <PlusOutlined />
+                                        <div style="margin-top: 8px">点击上传主图</div>
+                                    </div>
+                                    <div v-else class="main-image-wrapper">
+                                        <a-image
+                                            :src="mainImageUrl"
+                                            :preview="{ src: mainImageUrl }"
+                                            :width="140"
+                                            :height="140"
+                                            class="main-image"
+                                        />
+                                        <div class="main-image-actions">
+                                            <a-button size="small" @click="removeMainImage">删除</a-button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 上传进度条 -->
+                                <div v-if="mainImageUploadProgress > 0 && mainImageUploadProgress < 100" class="upload-progress-wrap">
+                                    <div class="upload-progress-item">
+                                        <span class="upload-progress-name">主图上传中...</span>
+                                        <a-progress :percent="mainImageUploadProgress" :show-info="false" />
+                                    </div>
+                                </div>
+                                
+                                <div class="images-tip">
+                                    主图优先使用 mainImage；若为空则回退图片集第一张。
+                                </div>
+                                
+                                <!-- 隐藏的主图上传组件 -->
+                                <a-upload
+                                    ref="mainUploadRef"
+                                    style="display: none"
+                                    :show-upload-list="false"
+                                    :accept="'.jpg,.jpeg,.png,.webp'"
+                                    :before-upload="beforeMainImageUpload"
+                                    :custom-request="handleMainImageCustomRequest"
+                                />
+                            </a-form-item>
+                        </a-col>
+
                         <!-- 图片集：预览/删除/上传/排序 -->
                         <a-col :xs="24">
                             <a-form-item label="商品图片集（最多10张，可拖拽排序）" required>
@@ -115,6 +161,24 @@
                                             </div>
                                         </div>
                                     </a-upload>
+                                </div>
+
+                                <!-- 上传进度 -->
+                                <div v-if="uploadProgressList.length" class="upload-progress-wrap">
+                                    <div
+                                        v-for="item in uploadProgressList"
+                                        :key="item.uid"
+                                        class="upload-progress-item"
+                                    >
+                                        <div class="upload-progress-name" :title="item.name">
+                                            {{ item.name }}
+                                        </div>
+                                        <a-progress
+                                            :percent="item.percent"
+                                            size="small"
+                                            :status="item.status === 'error' ? 'exception' : item.status === 'done' ? 'success' : 'active'"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div class="images-tip">
@@ -184,10 +248,13 @@ import {
     Button as AButton,
     Card as ACard,
     Col as ACol,
+    Empty as AEmpty,
     Form as AForm,
+    Image as AImage,
     Input as AInput,
     message,
     Modal as AModal,
+    Progress as AProgress,
     Radio as ARadio,
     Row as ARow,
     Select as ASelect,
@@ -211,6 +278,7 @@ const MAX_IMAGES = 10;
 const route = useRoute();
 const router = useRouter();
 const formRef = ref<FormInstance>();
+const mainUploadRef = ref<any>(null);
 
 const loading = ref(false);
 const submitting = ref(false);
@@ -239,8 +307,9 @@ const formState = reactive<UpdateProductRequest>({
     isHot: 0,
     mainImage: '',
     videoUrl: '',
-    // 若你的类型里有 images 字段，这里会在 submit 时动态挂载
 } as UpdateProductRequest);
+
+const mainImageUploadProgress = ref(0);
 
 const brandIdDisplayText = computed(() => {
     const s = String(formState.brandId ?? '').trim().toLowerCase();
@@ -248,10 +317,19 @@ const brandIdDisplayText = computed(() => {
 });
 
 const imagesFileList = ref<UploadFile[]>([]);
+const mainImageUrl = ref(''); // 主图显示URL（mainImage 优先，否则 images[0]）
 
 const previewVisible = ref(false);
 const previewImage = ref('');
 const previewTitle = ref('');
+
+type UploadProgressItem = {
+    uid: string;
+    name: string;
+    percent: number;
+    status: 'uploading' | 'done' | 'error';
+};
+const uploadProgressList = ref<UploadProgressItem[]>([]);
 
 onMounted(() => {
     fetchDetail();
@@ -268,7 +346,6 @@ function isValidImage(file: File) {
 
 function resolvePreviewUrl(file: UploadFile): string {
     const resp = (file.response || {}) as any;
-
     return (
         (file.thumbUrl as string) ||
         (resp.previewUrl as string) ||
@@ -278,7 +355,100 @@ function resolvePreviewUrl(file: UploadFile): string {
     );
 }
 
+function syncMainImagePreviewByRule(detailMainImage?: string) {
+    const main = String(detailMainImage || '').trim();
 
+    if (main) {
+        // mainImage 是直接可以前端使用的 URL，无需调用签名接口
+        mainImageUrl.value = main;
+        return;
+    }
+
+    const first = imagesFileList.value[0];
+    mainImageUrl.value = first ? resolvePreviewUrl(first) : '';
+}
+
+function removeMainImage() {
+    formState.mainImage = '';
+    mainImageUrl.value = '';
+    syncImagesToForm();
+}
+
+function triggerMainImageUpload() {
+    const input = mainUploadRef.value?.$el?.querySelector?.('input[type="file"]') as HTMLInputElement | null;
+    input?.click();
+}
+
+const beforeMainImageUpload: UploadProps['beforeUpload'] = (file) => {
+    const f = file as File;
+    if (!isValidImage(f)) {
+        message.error('仅支持 jpg/jpeg/png/webp 图片');
+        return false;
+    }
+    
+    const maxMb = 10;
+    if (f.size / 1024 / 1024 > maxMb) {
+        message.error(`单张图片不能超过 ${maxMb}MB`);
+        return false;
+    }
+    
+    return true;
+};
+
+const handleMainImageCustomRequest: UploadProps['customRequest'] = async (options) => {
+    const rawFile = options.file as File;
+    
+    try {
+        // 重置进度
+        mainImageUploadProgress.value = 0;
+        
+        const uploaded = await uploadToOss({
+            bizType: 'product',
+            mediaType: 'image',
+            file: rawFile,
+            onProgress: (percent) => {
+                const p = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+                mainImageUploadProgress.value = p;
+                options.onProgress?.({ percent: p });
+            },
+        });
+        
+        const url = (uploaded as any).previewUrl || (uploaded as any).url || '';
+        if (!url) {
+            throw new Error('上传成功但未返回可用URL');
+        }
+        
+        formState.mainImage = url;
+        mainImageUrl.value = url;
+        mainImageUploadProgress.value = 100;
+        
+        options.onSuccess?.(uploaded);
+        message.success('主图上传成功');
+        
+        setTimeout(() => {
+            mainImageUploadProgress.value = 0;
+        }, 800);
+    } catch (e: any) {
+        console.error(e);
+        mainImageUploadProgress.value = 0;
+        message.error(e?.message || '主图上传失败');
+        options.onError?.(e);
+    }
+};
+
+function upsertProgress(item: UploadProgressItem) {
+    const idx = uploadProgressList.value.findIndex((x) => x.uid === item.uid);
+    if (idx >= 0) {
+        uploadProgressList.value[idx] = item;
+    } else {
+        uploadProgressList.value.push(item);
+    }
+}
+function removeProgress(uid: string, delay = 800) {
+    setTimeout(() => {
+        uploadProgressList.value = uploadProgressList.value.filter((x) => x.uid !== uid);
+    }, delay);
+}
 
 const beforeImageUpload: UploadProps['beforeUpload'] = (file) => {
     const f = file as File;
@@ -302,6 +472,9 @@ const beforeImageUpload: UploadProps['beforeUpload'] = (file) => {
 };
 
 const handleImageCustomRequest: UploadProps['customRequest'] = async (options) => {
+    const rawFile = options.file as File;
+    const progressUid = `${Date.now()}-${rawFile.name}-${Math.random().toString(36).slice(2, 8)}`;
+
     try {
         if (imagesFileList.value.length >= MAX_IMAGES) {
             message.warning(`最多上传 ${MAX_IMAGES} 张图片`);
@@ -309,32 +482,61 @@ const handleImageCustomRequest: UploadProps['customRequest'] = async (options) =
             return;
         }
 
-        const rawFile = options.file as File;
+        upsertProgress({
+            uid: progressUid,
+            name: rawFile.name || 'image',
+            percent: 0,
+            status: 'uploading',
+        });
+
         const uploaded = await uploadToOss({
             bizType: 'product',
             mediaType: 'image',
             file: rawFile,
-            onProgress: (percent) => options.onProgress?.({ percent }),
+            onProgress: (percent) => {
+                const p = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+                upsertProgress({
+                    uid: progressUid,
+                    name: rawFile.name || 'image',
+                    percent: p,
+                    status: 'uploading',
+                });
+                options.onProgress?.({ percent: p });
+            },
         });
 
-        console.log('uploaded', uploaded);
-
         const next: UploadFile = {
-            uid: String(uploaded.id),
-            name: uploaded.originalName || rawFile.name || 'image',
+            uid: String((uploaded as any).id || progressUid),
+            name: (uploaded as any).originalName || rawFile.name || 'image',
             status: 'done',
-            url: uploaded.previewUrl, // 原图地址
-            thumbUrl: uploaded.previewUrl, // 优先可预览地址
-            response: uploaded, // 保留原始返回
+            url: (uploaded as any).previewUrl || (uploaded as any).url || '',
+            thumbUrl: (uploaded as any).previewUrl || (uploaded as any).url || '',
+            response: uploaded,
         };
-
 
         imagesFileList.value = [...imagesFileList.value, next].slice(0, MAX_IMAGES);
         syncImagesToForm();
+
+        upsertProgress({
+            uid: progressUid,
+            name: rawFile.name || 'image',
+            percent: 100,
+            status: 'done',
+        });
+        removeProgress(progressUid);
+
         options.onSuccess?.(uploaded);
         message.success('上传成功');
     } catch (e: any) {
         console.error(e);
+        upsertProgress({
+            uid: progressUid,
+            name: rawFile.name || 'image',
+            percent: 100,
+            status: 'error',
+        });
+        removeProgress(progressUid, 1500);
+
         message.error(e?.message || '上传失败');
         options.onError?.(e);
     }
@@ -363,11 +565,11 @@ async function removeImageAt(index: number) {
             await deleteFileApi({ fileId: String(fileId) });
         }
     } catch (e) {
-        // 老图通常没有 fileId，删除云端失败不阻塞前端移除
         console.warn('delete file api skipped/failed:', e);
     }
 
     imagesFileList.value.splice(index, 1);
+    imagesFileList.value = [...imagesFileList.value];
     syncImagesToForm();
 }
 
@@ -376,11 +578,15 @@ function syncImagesToForm() {
         .map((f) => String(f.url || f.thumbUrl || '').trim())
         .filter(Boolean);
 
-    // 约定：第一张作为 mainImage
-    formState.mainImage = orderedUrls[0] || '';
-
-    // 如果 UpdateProductRequest 有 images 字段，动态写入
     (formState as any).images = orderedUrls;
+    
+    // 只在 mainImage 为空时才用图片集第一张
+    if (!formState.mainImage) {
+        formState.mainImage = orderedUrls[0] || '';
+    }
+
+    // 当前页面主图预览：用当前 mainImage（如果存在），否则图片集首图
+    syncMainImagePreviewByRule(formState.mainImage);
 }
 
 async function fetchDetail() {
@@ -402,12 +608,12 @@ async function fetchDetail() {
         formState.isNew = detail.isNew ?? 0;
         formState.isHot = detail.isHot ?? 0;
         formState.videoUrl = detail.videoUrl || '';
+        formState.mainImage = detail.mainImage ?? '';
 
         categoryInfo.id = String(detail.categoryId ?? '');
         categoryInfo.name = detail.categoryName || '';
 
-        // 兼容两种后端返回：images[] 或只有 mainImage
-        const images: string[] = Array.isArray((detail as any).images)
+        const images: string[] = Array.isArray(detail.images)
             ? (detail as any).images.filter(Boolean)
             : detail.mainImage
                 ? [detail.mainImage]
@@ -424,6 +630,9 @@ async function fetchDetail() {
                 previewUrl: url,
             },
         }));
+
+        // 主图：mainImage 优先，否则 images 第一张
+        syncMainImagePreviewByRule(String(detail.mainImage || ''));
 
         syncImagesToForm();
     } catch (e) {
@@ -442,8 +651,9 @@ async function handleSubmit() {
     try {
         await formRef.value?.validate();
 
-        if (!imagesFileList.value.length) {
-            message.warning('请至少上传1张商品图片');
+        // 验证主图
+        if (!mainImageUrl.value) {
+            message.error('请至少为商品选择一张主图');
             return;
         }
 
@@ -452,7 +662,6 @@ async function handleSubmit() {
 
         const payload: UpdateProductRequest = {
             name: formState.name?.trim(),
-            // 品牌ID只读，按你现逻辑做空值屏蔽
             brandId:
                 !formState.brandId ||
                 String(formState.brandId).trim().toLowerCase() === 'null' ||
@@ -466,7 +675,6 @@ async function handleSubmit() {
             isHot: formState.isHot,
             mainImage: formState.mainImage?.trim() || undefined,
             videoUrl: formState.videoUrl?.trim() || undefined,
-            // 若后端支持 images 数组，会一并提交
             ...(Array.isArray((formState as any).images)
                 ? { images: (formState as any).images }
                 : {}),
@@ -506,6 +714,17 @@ function handleBack() {
 
 .page-title {
     color: hsl(var(--foreground));
+}
+
+.main-image-box {
+    min-height: 110px;
+    display: flex;
+    align-items: center;
+}
+
+.main-image {
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 .images-editor {
@@ -577,6 +796,27 @@ function handleBack() {
     cursor: pointer;
 }
 
+.main-upload-trigger {
+    width: 140px;
+    height: 140px;
+}
+
+.main-image-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.main-image-actions {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px;
+    display: flex;
+    justify-content: flex-end;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+}
+
 .upload-trigger:hover {
     border-color: #1677ff;
     color: #1677ff;
@@ -586,6 +826,29 @@ function handleBack() {
     margin-top: 4px;
     font-size: 12px;
     color: #999;
+}
+
+.upload-progress-wrap {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.upload-progress-item {
+    border: 1px solid #f0f0f0;
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: #fff;
+}
+
+.upload-progress-name {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .images-tip {
