@@ -317,12 +317,14 @@ const handleImageCustomRequest: UploadProps['customRequest'] = async (options) =
             onProgress: (percent) => options.onProgress?.({ percent }),
         });
 
+        console.log('uploaded', uploaded);
+
         const next: UploadFile = {
             uid: String(uploaded.id),
             name: uploaded.originalName || rawFile.name || 'image',
             status: 'done',
-            url: uploaded.url, // 原图地址（可能私有）
-            thumbUrl: uploaded.previewUrl || uploaded.url, // 优先可预览地址
+            url: uploaded.previewUrl, // 原图地址
+            thumbUrl: uploaded.previewUrl, // 优先可预览地址
             response: uploaded, // 保留原始返回
         };
 
