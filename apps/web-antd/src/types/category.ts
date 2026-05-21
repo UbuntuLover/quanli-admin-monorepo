@@ -1,7 +1,7 @@
 export interface CategoryDTO {
     id: string;
     name: string;
-    parentId: number;
+    parentId: string;
     level: number;
     sort: number;
     icon?: string;
@@ -25,7 +25,7 @@ export interface CreateCategoryRequest {
 
 export interface UpdateCategoryRequest {
     name?: string;
-    parentId?: number;
+    parentId?: string | null;
     sort?: number;
     icon?: string;
     status?: string;

@@ -401,9 +401,9 @@ async function handleSave() {
 
         const payload: UpdateCategoryRequest = {
             name: editForm.name.trim(),
-            parentId: Number(editForm.parentId),
+            parentId: editForm.parentId,
             sort: Number(editForm.sort || 0),
-            icon: editForm.icon || null,
+            icon: editForm.icon,
             status: editForm.status,
         };
 
@@ -483,9 +483,9 @@ async function submitCreateChild() {
         creating.value = true;
         const payload: CreateCategoryRequest = {
             name: createChildForm.name.trim(),
-            parentId: Number(createChildParentId.value),
+            parentId: createChildParentId.value,
             sort: Number(createChildForm.sort || 0),
-            icon: createChildForm.icon || null,
+            icon: createChildForm.icon,
         };
 
         const created = await createCategoryApi(payload);

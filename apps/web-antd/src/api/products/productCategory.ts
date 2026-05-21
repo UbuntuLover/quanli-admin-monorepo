@@ -19,12 +19,12 @@ export function getAllCategoriesApi() {
 }
 
 /** 获取分类详情 */
-export function getCategoryDetailApi(id: number) {
+export function getCategoryDetailApi(id: string) {
     return requestClient.get<CategoryDTO>(`/api/product-categories/${id}`);
 }
 
 /** 获取子分类（修正路径） */
-export function getSubCategoriesApi(parentId: number) {
+export function getSubCategoriesApi(parentId: string) {
     return requestClient.get<CategoryDTO[]>(
         `/api/product-categories/${parentId}/sub-categories`,
     );
@@ -41,17 +41,17 @@ export function createCategoryApi(data: CreateCategoryRequest) {
 }
 
 /** 更新分类 */
-export function updateCategoryApi(id: number, data: UpdateCategoryRequest) {
+export function updateCategoryApi(id: string, data: UpdateCategoryRequest) {
     return requestClient.put<CategoryDTO>(`/api/product-categories/${id}`, data);
 }
 
 /** 删除分类 */
-export function deleteCategoryApi(id: number) {
+export function deleteCategoryApi(id: string) {
     return requestClient.delete<boolean>(`/api/product-categories/${id}`);
 }
 
 /** 删除预览 */
-export function previewDeleteCategoryApi(id: number) {
+export function previewDeleteCategoryApi(id: string) {
     return requestClient.get<CategoryDeletePreviewDTO>(
         `/api/product-categories/${id}/delete-preview`,
     );
@@ -59,7 +59,7 @@ export function previewDeleteCategoryApi(id: number) {
 
 /** 迁移商品 */
 export function moveCategoryProductsApi(
-    sourceCategoryId: number,
+    sourceCategoryId: string,
     data: MoveCategoryProductsRequest,
 ) {
     return requestClient.post<number>(
