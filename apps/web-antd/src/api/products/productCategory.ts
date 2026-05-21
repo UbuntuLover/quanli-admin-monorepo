@@ -19,7 +19,7 @@ export function getCategoryTreeApi() {
  * 获取所有分类。
  */
 export function getAllCategoriesApi() {
-    return requestClient.get<CategoryDTO[]>('/api/product-categories');
+    return requestClient.get<CategoryDTO[]>('/api/product-categories/all');
 }
 
 /**

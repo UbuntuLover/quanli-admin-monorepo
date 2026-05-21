@@ -18,7 +18,7 @@ export interface CascaderOption {
 
 export interface CreateCategoryRequest {
     name: string;
-    parentId?: number;
+    parentId: string;
     sort?: number;
     icon?: string;
 }
