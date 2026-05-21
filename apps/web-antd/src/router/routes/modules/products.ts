@@ -14,9 +14,10 @@ const routes: RouteRecordRaw[] = [
             {
                 name: 'ProductsList',
                 path: 'list',
-                icon: 'material-symbols:production-quantity-limits-sharp',
+
                 meta: {
                     title: $t('products.list'),
+                    icon: 'lucide:logs',
                 },
                 component: () => import('#/views/products/list/index.vue'),
             },
@@ -26,6 +27,17 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('#/views/products/create/index.vue'),
                 meta: {
                     title: '新建商品',
+                    icon: 'lucide:calendar-plus',
+                },
+            },
+            {
+                path: 'create-category',
+                name: 'ProductCreateCategory',
+
+                component: () => import('#/views/products/create-category/index.vue'),
+                meta: {
+                    title: '新建商品分类',
+                    icon: 'lucide:clipboard-plus',
                 },
             },
             {

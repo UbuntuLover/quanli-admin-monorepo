@@ -1,5 +1,5 @@
 export interface ProductQueryDTO {
-    categoryId?: string;
+    categoryId?: number;
     brandId?: number;
     name?: string;
     minPrice?: number;
@@ -50,7 +50,7 @@ export interface ProductDTO {
     id: number;
     productNo: string;
     name: string;
-    categoryId: string;
+    categoryId: number;
     categoryName?: string;
     brandId?: number;
     brandName?: string;
@@ -106,8 +106,8 @@ export interface CreateProductRequest {
 
 export interface UpdateProductRequest {
     name?: string;
-    categoryId?: string;
-    brandId?: string;
+    categoryId?: number;
+    brandId?: number;
     subtitle?: string;
     description?: string;
     status?: string;
@@ -115,7 +115,6 @@ export interface UpdateProductRequest {
     isHot?: number;
     mainImage?: string;
     videoUrl?: string;
-    images?: string[];
 }
 
 export interface ProductAttributeDTO {

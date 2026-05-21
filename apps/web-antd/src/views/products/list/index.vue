@@ -1,6 +1,6 @@
 <template>
     <div class="product-list-page">
-        <a-card :bordered="false" class="table-card">
+        <a-card :bordered="false">
             <template #title>
                 <div class="page-title">
                     <span>商品管理</span>
@@ -38,7 +38,7 @@
                     </a-col>
 
                     <a-col :xs="24" :sm="12" :md="8" :lg="5">
-                        <a-form-item label="分类（请选择到三级分类）">
+                        <a-form-item label="三级分类">
                             <a-cascader
                                 v-model:value="categoryPath"
                                 :options="categoryOptions"
@@ -179,14 +179,9 @@
                             />
 
                             <div class="product-info">
-                                <a-button
-                                    type="link"
-                                    class="product-name-link"
-                                    @click="handleDetail(record)"
-                                >
+                                <div class="product-name">
                                     {{ record.name }}
-                                </a-button>
-
+                                </div>
 
                                 <div class="product-no">
                                     编号：{{ record.productNo }}
@@ -333,7 +328,7 @@ const productList = ref<ProductListDTO[]>([]);
 const total = ref(0);
 
 const categoryTree = ref<CategoryDTO[]>([]);
-const categoryPath = ref<string[]>([]);
+const categoryPath = ref<number[]>([]);
 
 const minPriceYuan = ref<number | undefined>();
 const maxPriceYuan = ref<number | undefined>();
@@ -453,9 +448,8 @@ function convertCategoryToOptions(categories: CategoryDTO[]): CascaderOption[] {
                 ? convertCategoryToOptions(item.children)
                 : undefined;
 
-
         return {
-            value: String(item.id),
+            value: Number(item.id),
             label: item.name,
             children,
             disabled: item.status !== 'ACTIVE',
@@ -464,12 +458,11 @@ function convertCategoryToOptions(categories: CategoryDTO[]): CascaderOption[] {
 }
 
 function handleCategoryChange(value: Array<number | string>) {
-    const values = (value || []).map((item) => String(item));
+    const values = (value || []).map((item) => Number(item));
     categoryPath.value = values;
 
     queryForm.categoryId =
         values.length > 0 ? values[values.length - 1] : undefined;
-
 }
 
 function handleSortChange(value: string) {
@@ -528,16 +521,11 @@ function handleCreatePackageProduct() {
 }
 
 function handleDetail(record: ProductListDTO) {
-    router.push({
-        name: 'ProductDetail',
-        params: {
-            id: record.id,
-        },
-    });
+    router.push(`/product/detail/${record.id}`);
 }
 
 function handleEdit(record: ProductListDTO) {
-    router.push(`/products/edit/${record.id}`);
+    router.push(`/product/edit/${record.id}`);
 }
 
 async function handleChangeStatus(record: ProductListDTO, status: string) {
@@ -589,63 +577,20 @@ function getStatusText(status: string) {
 
 <style scoped>
 .product-list-page {
-    min-height: 100%;
     padding: 16px;
-    color: hsl(var(--foreground));
-    background: hsl(var(--background));
-
-    --sv-bg-card: hsl(var(--card));
-    --sv-bg-soft: hsl(var(--accent));
-    --sv-text: hsl(var(--foreground));
-    --sv-text-secondary: hsl(var(--muted-foreground));
-    --sv-border: hsl(var(--border));
-    --sv-border-strong: hsl(var(--border));
 }
 
 .page-title {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--sv-text);
 }
 
 .filter-form {
-    margin-bottom: 16px;
+    margin-bottom: 24px;
     padding: 16px;
-    background: var(--sv-bg-card);
-    border: 1px solid var(--sv-border);
+    background: #fafafa;
     border-radius: 8px;
-}
-
-/* Table */
-.table-card :deep(.ant-table) {
-    color: var(--sv-text);
-    background: var(--sv-bg-card);
-}
-
-.table-card :deep(.ant-table-container) {
-    border-color: var(--sv-border);
-}
-
-.table-card :deep(.ant-table-cell) {
-    padding: 8px;
-    color: var(--sv-text);
-    background: var(--sv-bg-card);
-    border-color: var(--sv-border);
-}
-
-.table-card :deep(.ant-table-thead > tr > th) {
-    color: var(--sv-text);
-    background: var(--sv-bg-soft);
-    border-color: var(--sv-border);
-}
-
-.table-card :deep(.ant-table-tbody > tr > td) {
-    border-color: var(--sv-border);
-}
-
-.table-card :deep(.ant-table-tbody > tr:hover > td) {
-    background: color-mix(in srgb, var(--sv-bg-card) 92%, var(--sv-text) 8%);
 }
 
 .product-cell {
@@ -658,7 +603,7 @@ function getStatusText(status: string) {
     flex-shrink: 0;
     object-fit: cover;
     overflow: hidden;
-    background: color-mix(in srgb, var(--sv-bg-card) 90%, var(--sv-text-secondary) 10%);
+    background: #f5f5f5;
     border-radius: 6px;
 }
 
@@ -670,7 +615,7 @@ function getStatusText(status: string) {
     max-width: 250px;
     overflow: hidden;
     font-weight: 500;
-    color: var(--sv-text);
+    color: rgb(0 0 0 / 88%);
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -678,36 +623,15 @@ function getStatusText(status: string) {
 .product-no {
     margin-top: 4px;
     font-size: 12px;
-    color: var(--sv-text-secondary);
+    color: #999;
 }
-
-.product-name-link {
-    max-width: 250px;
-    padding: 0 !important;
-    font-weight: 500;
-    color: var(--sv-text);
-    text-align: left;
-}
-
-.product-name-link :deep(span) {
-    display: inline-block;
-    max-width: 250px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.product-name-link:hover {
-    color: #1677ff;
-}
-
 
 .product-subtitle {
     max-width: 250px;
     margin-top: 4px;
     overflow: hidden;
     font-size: 12px;
-    color: var(--sv-text-secondary);
+    color: #666;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -724,11 +648,11 @@ function getStatusText(status: string) {
 .original-price {
     margin-left: 8px;
     font-size: 12px;
-    color: var(--sv-text-secondary);
+    color: #999;
     text-decoration: line-through;
 }
 
 .muted {
-    color: var(--sv-text-secondary);
+    color: #999;
 }
 </style>
