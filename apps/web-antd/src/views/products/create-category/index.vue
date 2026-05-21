@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import type { UploadFile, UploadProps } from 'ant-design-vue';
+import {computed, onMounted, reactive, ref} from 'vue';
+import type {UploadFile, UploadProps} from 'ant-design-vue';
 import {
     Button as AButton,
     Card as ACard,
@@ -18,28 +17,38 @@ import {
 
 import {
     createCategoryApi,
-    getAllCategoriesApi,
+    getCategoryTreeApi,
 } from '#/api/products/productCategory';
 
-import {
-    completeUploadApi,
-    getUploadPolicyApi,
-    type FileUploadPolicyVO,
-    type SysFileVO,
-} from '#/api/file';
+import { uploadByPolicy } from '#/utils/upload-by-policy';
+import type { SysFileVO } from '#/api/file';
 
-import { baseRequestClient } from '#/api/request';
-import type { CategoryDTO } from '#/types/category';
+import type {CategoryDTO} from '#/types/category';
 
-const router = useRouter();
+type ParentOption = {
+    label: string;
+    value: string;
+    level: number;
+    disabled?: boolean;
+    rawName?: string;
+    pathText?: string;
+};
 
 const loading = ref(false);
 const categoryLoading = ref(false);
 
-// 父分类下拉
-const parentOptions = ref<Array<{ label: string; value: string }>>([
-    { label: '顶级分类', value: '0' },
+const parentOptions = ref<ParentOption[]>([
+    {
+        label: '顶级分类 [L0]',
+        value: '0',
+        level: 0,
+        disabled: false,
+        rawName: '顶级分类',
+        pathText: '顶级分类',
+    },
 ]);
+
+const parentLevelMap = ref<Record<string, number>>({0: 0});
 
 // 图标上传状态
 const iconUploading = ref(false);
@@ -53,35 +62,82 @@ const form = reactive({
     icon: '',
 });
 
-function flattenTree(list: CategoryDTO[], result: CategoryDTO[] = []): CategoryDTO[] {
-    for (const item of list) {
-        result.push(item);
-        if (item.children?.length) {
-            flattenTree(item.children, result);
+const selectedParentLevel = computed(() => parentLevelMap.value[form.parentId] ?? 0);
+const willCreateLevel = computed(() => selectedParentLevel.value + 1);
+
+// ----------- 分类树处理（核心修复）-----------
+function buildTreeOptions(nodes: CategoryDTO[], parentPath = ''): ParentOption[] {
+    const result: ParentOption[] = [];
+
+    for (const node of nodes || []) {
+        const level = Number(node.level || 1);
+        const name = node.name || '';
+        const currentPath = parentPath ? `${parentPath} / ${name}` : name;
+
+        // 视觉缩进：L1 无缩进，L2/L3 递进
+        const indent = level > 1 ? `${'　'.repeat(level - 2)}└─ ` : '';
+
+        result.push({
+            value: String(node.id),
+            label: `${indent}${name} [L${level}]`,
+            level,
+            rawName: name,
+            pathText: currentPath,
+            // 父级只能选到L2；L3禁选，避免创建L4
+            disabled: level >= 3,
+        });
+
+        if (node.children?.length) {
+            result.push(...buildTreeOptions(node.children, currentPath));
         }
     }
+
     return result;
 }
 
-function buildCategoryLabel(category: CategoryDTO) {
-    const level = Number(category.level || 1);
-    const prefix = level > 1 ? '—'.repeat(level - 1) : '';
-    return `${prefix}${category.name}`;
+function filterParentOption(input: string, option: any) {
+    const kw = input.trim().toLowerCase();
+    if (!kw) return true;
+
+    const label = String(option?.label ?? '').toLowerCase();
+    const rawName = String(option?.rawName ?? '').toLowerCase();
+    const pathText = String(option?.pathText ?? '').toLowerCase();
+
+    return label.includes(kw) || rawName.includes(kw) || pathText.includes(kw);
 }
 
 async function loadCategories() {
     try {
         categoryLoading.value = true;
-        const list = (await getAllCategoriesApi()) as CategoryDTO[];
-        const flat = flattenTree(list || []);
 
-        parentOptions.value = [
-            { label: '顶级分类', value: '0' },
-            ...flat.map((item) => ({
-                label: buildCategoryLabel(item),
-                value: item.id
-            })),
+        // 使用树接口，确保展示关系准确
+        const tree = (await getCategoryTreeApi()) as CategoryDTO[];
+
+        const options: ParentOption[] = [
+            {
+                label: '顶级分类 [L0]',
+                value: '0',
+                level: 0,
+                disabled: false,
+                rawName: '顶级分类',
+                pathText: '顶级分类',
+            },
+            ...buildTreeOptions(tree || []),
         ];
+
+        parentOptions.value = options;
+
+        const levelMap: Record<string, number> = {0: 0};
+        options.forEach((o) => {
+            levelMap[o.value] = o.level;
+        });
+        parentLevelMap.value = levelMap;
+
+        // 若当前选中项无效或被禁用，回退顶级
+        const selected = options.find((x) => x.value === form.parentId);
+        if (!selected || selected.disabled) {
+            form.parentId = '0';
+        }
     } catch (e: any) {
         message.error(e?.message || '加载分类失败');
     } finally {
@@ -89,63 +145,20 @@ async function loadCategories() {
     }
 }
 
-/**
- * 上传核心流程：
- * 1) 调业务接口拿 policy
- * 2) 走 OSS endpoint 直传（使用 baseRequestClient，避免业务拦截器污染）
- * 3) 调业务接口 complete
- */
-async function uploadImageWithPolicy(
-    file: File,
-    onProgress?: (p: number) => void,
-): Promise<SysFileVO> {
-    const policy = (await getUploadPolicyApi({
-        bizType: 'product',
-        mediaType: 'image',
-        fileName: file.name,
-        contentType: file.type || 'image/jpeg',
-    })) as FileUploadPolicyVO;
 
-    const fd = new FormData();
-    fd.append('key', policy.objectKey);
-    fd.append('policy', policy.policy);
-    fd.append('OSSAccessKeyId', policy.accessKeyId);
-    fd.append('signature', policy.signature);
-    fd.append('success_action_status', '200');
-    fd.append('file', file);
-
-    // 重点：使用 baseRequestClient 上传到外部 endpoint
-    await baseRequestClient.post(policy.endpoint, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (evt: ProgressEvent) => {
-            const total = evt.total || 0;
-            if (!total) return;
-            const percent = Math.round((evt.loaded / total) * 100);
-            onProgress?.(percent);
-        },
-    });
-
-    const saved = (await completeUploadApi({
-        bizType: 'product',
-        mediaType: 'image',
-        objectKey: policy.objectKey,
-        originalName: file.name,
-        size: file.size,
-        mimeType: file.type || 'image/jpeg',
-    })) as SysFileVO;
-
-    return saved;
-}
 
 const beforeIconUpload: UploadProps['beforeUpload'] = async (raw) => {
     const file = raw as File;
-
     try {
         iconUploading.value = true;
         iconProgress.value = 0;
 
-        const saved = await uploadImageWithPolicy(file, (p) => {
-            iconProgress.value = p;
+        const saved: SysFileVO = await uploadByPolicy(file, {
+            bizType: 'product',
+            mediaType: 'image',
+            onProgress: (p) => {
+                iconProgress.value = p;
+            },
         });
 
         form.icon = saved.url;
@@ -168,6 +181,7 @@ const beforeIconUpload: UploadProps['beforeUpload'] = async (raw) => {
     return false;
 };
 
+
 function handleRemoveIcon() {
     form.icon = '';
     iconFileList.value = [];
@@ -177,7 +191,7 @@ function handleRemoveIcon() {
 
 function resetForm() {
     form.name = '';
-    form.parentId = '';
+    form.parentId = '0';
     form.sort = 0;
     form.icon = '';
     iconFileList.value = [];
@@ -187,6 +201,12 @@ function resetForm() {
 async function handleSubmit() {
     try {
         if (!form.name.trim()) throw new Error('分类名称不能为空');
+
+        const parentLevel = parentLevelMap.value[form.parentId] ?? 0;
+        const newLevel = parentLevel + 1;
+        if (newLevel > 3) {
+            throw new Error('仅支持创建到第三级目录，请选择顶级/一级/二级分类作为父级');
+        }
 
         loading.value = true;
 
@@ -198,10 +218,9 @@ async function handleSubmit() {
         });
 
         message.success(`创建成功：${res.name}`);
-        // 1) 重置表单
-        resetForm();
 
-        // 2) 重新加载父分类下拉（相当于刷新当前页面关键数据）
+        // 刷新当前页数据（非整页reload）
+        resetForm();
         await loadCategories();
     } catch (e: any) {
         message.error(e?.message || '创建失败');
@@ -222,7 +241,7 @@ onMounted(() => {
                 <a-form-item label="分类名称" required>
                     <a-input
                         v-model:value="form.name"
-                        :maxlength=50
+                        :maxlength="50"
                         placeholder="请输入分类名称"
                     />
                 </a-form-item>
@@ -232,10 +251,14 @@ onMounted(() => {
                         v-model:value="form.parentId"
                         :options="parentOptions"
                         :loading="categoryLoading"
-                        :filter-option="true"
+                        show-search
+                        :filter-option="filterParentOption"
                         option-filter-prop="label"
-                        placeholder="请选择父分类（不选即顶级）"
+                        placeholder="请选择父分类（仅允许创建到第三级）"
                     />
+                    <div style="margin-top: 6px; color: #999; font-size: 12px">
+                        当前父级层级：L{{ selectedParentLevel }}，新建后层级：L{{ willCreateLevel }}（仅支持 L1~L3）
+                    </div>
                 </a-form-item>
 
                 <a-form-item label="排序">
@@ -259,7 +282,7 @@ onMounted(() => {
                         <div v-if="iconFileList.length < 1">上传图标</div>
                     </a-upload>
 
-                    <a-progress v-if="iconUploading" :percent="iconProgress" size="small" />
+                    <a-progress v-if="iconUploading" :percent="iconProgress" size="small"/>
                 </a-form-item>
 
                 <a-form-item>
