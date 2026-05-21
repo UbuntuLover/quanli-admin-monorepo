@@ -41,6 +41,16 @@ const routes: RouteRecordRaw[] = [
                 },
             },
             {
+                path: 'category-info',
+                name: 'ProductCategoryInfo',
+
+                component: () => import('#/views/products/category-info/index.vue'),
+                meta: {
+                    title: '商品分类信息',
+                    icon: 'lucide:badge-info',
+                },
+            },
+            {
                 path: 'detail/:id',
                 name: 'ProductDetail',
                 component: () => import('#/views/products/detail/index.vue'),
