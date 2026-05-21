@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import {computed, h, onMounted, reactive, ref, watch} from 'vue';
-import type {TreeProps, UploadFile, UploadProps} from 'ant-design-vue';
+import { computed, h, onMounted, reactive, ref, watch } from 'vue';
+import type { TreeProps, UploadFile, UploadProps } from 'ant-design-vue';
 import {
     Button as AButton,
     Card as ACard,
@@ -8,6 +8,7 @@ import {
     Empty as AEmpty,
     Form as AForm,
     FormItem as AFormItem,
+    Image as AImage,
     Input as AInput,
     InputNumber as AInputNumber,
     Modal as AModal,
@@ -38,8 +39,9 @@ import type {
     UpdateCategoryRequest,
 } from '#/types/category';
 
-import {uploadByPolicy} from '#/utils/upload-by-policy';
-import type {SysFileVO} from '#/api/file';
+import { uploadByPolicy } from '#/utils/upload-by-policy';
+import { getFilePreviewApi } from '#/api/file';
+import type { SysFileVO } from '#/api/file';
 
 type ParentOption = {
     label: string;
@@ -92,11 +94,15 @@ const deletePreviewLoading = ref(false);
 const deletePreview = ref<CategoryDeletePreviewDTO | null>(null);
 const deleting = ref(false);
 
+// 站内预览状态
+const previewVisible = ref(false);
+const previewImage = ref('');
+
 const parentOptions = ref<ParentOption[]>([
-    {label: '顶级分类 [L0]', value: '0', level: 0, pathText: '顶级分类'},
+    { label: '顶级分类 [L0]', value: '0', level: 0, pathText: '顶级分类' },
 ]);
 
-const levelMap = ref<Record<string, number>>({'0': 0});
+const levelMap = ref<Record<string, number>>({ '0': 0 });
 const parentMap = ref<Record<string, string>>({});
 const childrenMap = ref<Record<string, string[]>>({});
 
@@ -137,6 +143,23 @@ function highlightText(text: string, keyword: string) {
         ),
         post,
     ]);
+}
+
+/**
+ * 统一拿“可访问预览链接”，避免保存裸链 url
+ */
+async function resolveDisplayUrl(file: SysFileVO): Promise<string> {
+    if (file.previewUrl && /^https?:\/\//i.test(file.previewUrl)) {
+        return file.previewUrl;
+    }
+    try {
+        const p = await getFilePreviewApi(file.id, 1200, 1200);
+        if (p?.previewUrl) return p.previewUrl;
+        if (p?.thumbUrl) return p.thumbUrl;
+    } catch {
+        // ignore
+    }
+    return file.url || '';
 }
 
 const treeNodes = computed<TreeProps['treeData']>(() => {
@@ -209,7 +232,7 @@ function getDescendants(id: string): string[] {
 function rebuildTreeHelpers() {
     parentMap.value = {};
     childrenMap.value = {};
-    levelMap.value = {'0': 0};
+    levelMap.value = { '0': 0 };
 
     buildMapsFromTree(treeData.value, '0');
 
@@ -228,7 +251,7 @@ function rebuildTreeHelpers() {
 
 function buildParentOptions() {
     const result: ParentOption[] = [
-        {label: '顶级分类 [L0]', value: '0', level: 0, pathText: '顶级分类'},
+        { label: '顶级分类 [L0]', value: '0', level: 0, pathText: '顶级分类' },
     ];
 
     const dfs = (nodes: CategoryDTO[], path = '') => {
@@ -353,6 +376,14 @@ const onTreeSelect: TreeProps['onSelect'] = async (keys) => {
     await loadDetail(id);
 };
 
+const handleUploadPreview: UploadProps['onPreview'] = async (file) => {
+    const src = String(file.url || file.thumbUrl || '');
+    if (!src) return false;
+    previewImage.value = src;
+    previewVisible.value = true;
+    return false;
+};
+
 const beforeIconUpload: UploadProps['beforeUpload'] = async (raw) => {
     const file = raw as File;
     try {
@@ -364,13 +395,15 @@ const beforeIconUpload: UploadProps['beforeUpload'] = async (raw) => {
             onProgress: (p) => (iconProgress.value = p),
         })) as SysFileVO;
 
-        editForm.icon = saved.url;
+        const displayUrl = await resolveDisplayUrl(saved);
+
+        editForm.icon = displayUrl;
         iconFileList.value = [
             {
                 uid: String(saved.id),
                 name: saved.originalName || file.name,
                 status: 'done',
-                url: saved.previewUrl || saved.url,
+                url: displayUrl,
             },
         ];
         message.success('图标上传成功');
@@ -442,19 +475,21 @@ const beforeCreateIconUpload: UploadProps['beforeUpload'] = async (raw) => {
     try {
         createIconUploading.value = true;
         createIconProgress.value = 0;
-        const saved = await uploadByPolicy(file, {
+        const saved = (await uploadByPolicy(file, {
             bizType: 'product',
             mediaType: 'image',
             onProgress: (p) => (createIconProgress.value = p),
-        });
+        })) as SysFileVO;
 
-        createChildForm.icon = saved.url;
+        const displayUrl = await resolveDisplayUrl(saved);
+
+        createChildForm.icon = displayUrl;
         createIconFileList.value = [
             {
                 uid: String(saved.id),
                 name: saved.originalName || file.name,
                 status: 'done',
-                url: saved.previewUrl || saved.url,
+                url: displayUrl,
             },
         ];
         message.success('图标上传成功');
@@ -590,14 +625,14 @@ onMounted(async () => {
                     </template>
 
                     <a-spin :spinning="detailLoading">
-                        <a-empty v-if="!currentId" description="请选择左侧分类查看详情"/>
+                        <a-empty v-if="!currentId" description="请选择左侧分类查看详情" />
                         <a-form v-else layout="vertical">
                             <a-form-item label="分类ID">
-                                <a-input :value="String(currentId)" disabled/>
+                                <a-input :value="String(currentId)" disabled />
                             </a-form-item>
 
                             <a-form-item label="分类名称" required>
-                                <a-input v-model:value="editForm.name" :maxlength="50"/>
+                                <a-input v-model:value="editForm.name" :maxlength="50" />
                             </a-form-item>
 
                             <a-form-item label="父分类">
@@ -635,12 +670,13 @@ onMounted(async () => {
                                     list-type="picture-card"
                                     :file-list="iconFileList"
                                     :before-upload="beforeIconUpload"
+                                    :on-preview="handleUploadPreview"
                                     :max-count="1"
                                     @remove="removeIcon"
                                 >
                                     <div v-if="iconFileList.length < 1">上传图标</div>
                                 </a-upload>
-                                <a-progress v-if="iconUploading" :percent="iconProgress" size="small"/>
+                                <a-progress v-if="iconUploading" :percent="iconProgress" size="small" />
                             </a-form-item>
 
                             <a-form-item>
@@ -663,11 +699,11 @@ onMounted(async () => {
         >
             <a-form layout="vertical">
                 <a-form-item label="父分类">
-                    <a-input :value="createChildParentName" disabled/>
+                    <a-input :value="createChildParentName" disabled />
                 </a-form-item>
 
                 <a-form-item label="分类名称" required>
-                    <a-input v-model:value="createChildForm.name" :maxlength="50"/>
+                    <a-input v-model:value="createChildForm.name" :maxlength="50" />
                 </a-form-item>
 
                 <a-form-item label="排序">
@@ -685,12 +721,13 @@ onMounted(async () => {
                         list-type="picture-card"
                         :file-list="createIconFileList"
                         :before-upload="beforeCreateIconUpload"
+                        :on-preview="handleUploadPreview"
                         :max-count="1"
                         @remove="removeCreateIcon"
                     >
                         <div v-if="createIconFileList.length < 1">上传图标</div>
                     </a-upload>
-                    <a-progress v-if="createIconUploading" :percent="createIconProgress" size="small"/>
+                    <a-progress v-if="createIconUploading" :percent="createIconProgress" size="small" />
                 </a-form-item>
             </a-form>
         </a-modal>
@@ -713,6 +750,24 @@ onMounted(async () => {
                     <p style="color: #ff4d4f; margin-top: 12px">{{ deletePreview.warningMessage }}</p>
                 </div>
             </a-spin>
+        </a-modal>
+
+        <a-modal
+            v-model:open="previewVisible"
+            title="图片预览"
+            :footer="null"
+            centered
+            width="720px"
+            destroy-on-close
+        >
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 240px">
+                <a-image
+                    v-if="previewImage"
+                    :src="previewImage"
+                    alt="分类图标预览"
+                    style="max-width: 100%; max-height: 70vh; object-fit: contain"
+                />
+            </div>
         </a-modal>
     </div>
 </template>
