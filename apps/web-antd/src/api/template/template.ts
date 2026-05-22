@@ -162,3 +162,58 @@ export function getAvailableChildTemplatesApi(cardType?: 'COURSE' | 'VENUE') {
         { params: { cardType } },
     );
 }
+
+/** =========================
+ * 模板列表查询接口
+ * GET /admin/package-templates?cardType=COURSE|VENUE|COMBO&status=0|1&page=1&pageSize=10
+ * ========================= */
+export interface PackageTemplateQueryDTO {
+    cardType?: 'COURSE' | 'VENUE' | 'COMBO';
+    status?: number; // 0-下架 1-上架
+    templateName?: string;
+    page?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortDirection?: 'ASC' | 'DESC';
+}
+
+export interface PackageTemplatePageDTO {
+    list: PackageTemplateListDTO[];
+    total: number;
+    page: number;
+    pageSize: number;
+}
+
+export function getPackageTemplateListApi(params: PackageTemplateQueryDTO) {
+    return requestClient.get<PackageTemplatePageDTO>(
+        '/admin/package-templates/list',
+        { params },
+    );
+}
+
+/** =========================
+ * 模板详情查询接口
+ * GET /admin/package-templates/:id
+ * ========================= */
+export function getPackageTemplateDetailApi(id: number) {
+    return requestClient.get<PackageTemplateListDTO>(`/admin/package-templates/${id}`);
+}
+
+/** =========================
+ * 模板上下架接口
+ * PUT /admin/package-templates/:id/status
+ * ========================= */
+export function updatePackageTemplateStatusApi(id: number, status: number) {
+    return requestClient.put<boolean>(
+        `/admin/package-templates/${id}/status`,
+        { status },
+    );
+}
+
+/** =========================
+ * 模板删除接口
+ * DELETE /admin/package-templates/:id
+ * ========================= */
+export function deletePackageTemplateApi(id: number) {
+    return requestClient.delete<boolean>(`/admin/package-templates/${id}`);
+}
