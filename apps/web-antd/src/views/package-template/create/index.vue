@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {computed, onMounted, reactive, ref} from 'vue';
+import { useRoute } from 'vue-router';
 import type {CascaderOption} from 'ant-design-vue';
 import {
     Button as AButton,
@@ -38,6 +39,7 @@ interface KvItem {
     value: string;
 }
 
+const route = useRoute();
 const activeTab = ref<PackageMode>('SINGLE');
 const submitting = ref(false);
 const venueLoading = ref(false);
@@ -419,6 +421,14 @@ onMounted(() => {
     loadVenues();
     loadChildTemplates();
     loadCategories();
+
+    // 处理 cardType 参数（从复制跳转过来时）
+    const cardType = route.query.cardType as string;
+    if (cardType === 'COMBO') {
+        activeTab.value = 'COMBO';
+    } else if (cardType === 'COURSE' || cardType === 'VENUE') {
+        activeTab.value = 'SINGLE';
+    }
 });
 </script>
 

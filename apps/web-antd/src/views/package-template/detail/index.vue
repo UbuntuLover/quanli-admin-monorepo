@@ -333,7 +333,10 @@ function handleEdit() {
     if (templateDetail.value) {
         router.push({
             name: 'PackageTemplateEdit',
-            query: { id: templateDetail.value.id },
+            query: { 
+                id: templateDetail.value.id,
+                cardType: templateDetail.value.cardType
+            },
         });
     }
 }
@@ -368,7 +371,10 @@ function handleCopy() {
 
     router.push({
         name: 'PackageTemplateTemplate',
-        query: { copyId: templateDetail.value.id },
+        query: { 
+            copyId: templateDetail.value.id,
+            cardType: templateDetail.value.cardType
+        },
     });
 }
 

@@ -35,6 +35,7 @@ const routes: RouteRecordRaw[] = [
                 path: '/edit',
                 component: () => import('#/views/package-template/edit/index.vue'),
                 meta: {
+                    hideInMenu: true,
                     icon: 'lucide:pencil',
                     keepAlive: true,
                     title: '编辑权益卡模板',
