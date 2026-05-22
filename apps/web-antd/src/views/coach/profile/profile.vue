@@ -47,9 +47,17 @@
 
                                 <div class="coach-card__content">
                                     <div class="flex items-center gap-3">
-                                        <a-avatar class="coach-avatar" :size="56" :src="item.avatar || undefined">
-                                            {{ item.name?.slice(0, 1) || '教' }}
-                                        </a-avatar>
+                                        <div class="avatar-wrapper">
+                                            <a-avatar
+                                                v-if="item.avatar"
+                                                class="coach-avatar"
+                                                :size="56"
+                                                :src="item.avatar"
+                                            />
+                                            <div v-else class="avatar-char" :style="{ backgroundColor: getAvatarColor(item.name) }">
+                                                {{ getAvatarChar(item.name) }}
+                                            </div>
+                                        </div>
 
                                         <div class="min-w-0 flex-1">
                                             <div class="coach-name truncate text-base font-semibold">
@@ -177,6 +185,37 @@ function sleep(time = 300) {
     return new Promise((resolve) => window.setTimeout(resolve, time));
 }
 
+// 橙黄色系头像颜色
+const avatarColors = [
+    '#FF8C00', // 深橙色
+    '#FFA500', // 橙色
+    '#FFB347', // 浅橙色
+    '#FF9F43', // 橙黄色
+    '#F39C12', // 金橙色
+    '#E67E22', // 胡萝卜橙
+    '#D35400', // 南瓜橙
+    '#FF6B35', // 鲜橙色
+];
+
+function getAvatarColor(name?: string): string {
+    if (!name) return avatarColors[0];
+    const charCode = name.charCodeAt(0);
+    const index = charCode % avatarColors.length;
+    return avatarColors[index];
+}
+
+// 获取头像显示字符（英文名取第一个单词首字母）
+function getAvatarChar(name?: string): string {
+    if (!name) return '教';
+    // 判断是否为纯英文
+    if (/^[a-zA-Z\s]+$/.test(name.trim())) {
+        const firstWord = name.trim().split(/\s+/)[0];
+        return firstWord.charAt(0).toUpperCase();
+    }
+    // 中文或其他语言取第一个字符
+    return name.charAt(0);
+}
+
 function switchMockData(empty: boolean) {
     mockEmptyMode.value = empty;
     fetchList();
@@ -214,6 +253,31 @@ onMounted(fetchList);
     height: 100%;
     cursor: pointer;
     position: relative;
+}
+
+/* 字符头像样式 */
+.avatar-wrapper {
+    flex-shrink: 0;
+}
+
+.avatar-char {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 600;
+    color: #fff;
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.coach-card-wrap:hover .coach-avatar,
+.coach-card-wrap:hover .avatar-char {
+    transform: scale(1.06);
+    transition: transform 0.25s ease;
 }
 
 .coach-card-wrap :deep(.ant-card) {

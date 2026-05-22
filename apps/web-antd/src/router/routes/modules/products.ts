@@ -36,7 +36,7 @@ const routes: RouteRecordRaw[] = [
 
                 component: () => import('#/views/products/create-category/index.vue'),
                 meta: {
-                    title: '新建商品分类',
+                    title: '新建商品分类（顶级）',
                     icon: 'lucide:clipboard-plus',
                 },
             },

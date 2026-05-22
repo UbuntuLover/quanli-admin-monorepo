@@ -20,7 +20,7 @@ const routes: RouteRecordRaw[] = [
                     icon: 'lucide:user-plus',
                     keepAlive: true,
                     title: '教练创建',
-                                   },
+                },
             },
 
             {
@@ -57,13 +57,16 @@ const routes: RouteRecordRaw[] = [
                 path: '/coach/profile/list',
                 name: 'CoachProfileList',
                 component: () => import('#/views/coach/profile/profile.vue'),
-                meta: { title: '教练信息' },
+                meta: {
+                    title: '教练信息',
+                    icon: 'lucide:bike',
+                },
             },
             {
                 path: '/coach/profile/edit/:id',
                 name: 'CoachProfileEdit',
                 component: () => import('#/views/coach/profile/edit.vue'),
-                meta: { title: '编辑教练信息', hideInMenu: true },
+                meta: {title: '编辑教练信息', hideInMenu: true},
             }
         ]
     }];

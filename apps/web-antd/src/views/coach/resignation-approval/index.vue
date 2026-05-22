@@ -116,7 +116,7 @@
 
             <div
                 v-else-if="!loading"
-                class="flex min-h-[420px] flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-12"
+                class="flex min-h-[420px] flex-col items-center justify-center rounded-lg border border-dashed bg-[var(--color-bg-layout)] px-6 py-12"
             >
                 <a-empty :description="searchForm.keyword || searchForm.applyStatus ? '未找到匹配申请' : '暂无教练离职申请'" />
                 <div class="mt-6 flex items-center gap-3">

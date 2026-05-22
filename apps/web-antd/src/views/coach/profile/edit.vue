@@ -19,27 +19,26 @@
                 <a-empty v-if="!baseInfo && !loading" description="未找到该教练"/>
 
                 <a-form v-else layout="vertical">
-                    <!-- 头像：Avatar + 可切换圆形/方形 + 点击上传 -->
+                    <!-- 头像：固定圆形 + 点击上传 -->
                     <a-form-item label="教练头像">
                         <div class="coach-avatar-editor">
-                            <a-avatar
-                                :size="88"
-                                :shape="avatarShape"
-                                :src="avatarPreview || undefined"
-                                class="coach-avatar-preview"
-                                @click="openAvatarPicker"
-                            >
-                                <span class="avatar-fullname">{{ avatarFallbackFullName }}</span>
-                            </a-avatar>
+                            <div class="avatar-wrapper">
+                                <a-avatar
+                                    v-if="avatarPreview"
+                                    :size="88"
+                                    :src="avatarPreview"
+                                    class="coach-avatar-preview"
+                                    @click="openAvatarPicker"
+                                />
+                                <div v-else class="avatar-char" :style="{ backgroundColor: getAvatarColor(baseInfo?.name) }" @click="openAvatarPicker">
+                                    {{ getAvatarChar(baseInfo?.name) }}
+                                </div>
+                            </div>
 
                             <div class="coach-avatar-meta">
-                                <a-space>
-                                    <a-select v-model:value="avatarShape" :options="avatarShapeOptions"
-                                              style="width: 140px"/>
-                                    <a-button :loading="avatarUploading" @click="openAvatarPicker">
-                                        {{ avatarUploading ? '上传中...' : '更换头像' }}
-                                    </a-button>
-                                </a-space>
+                                <a-button :loading="avatarUploading" @click="openAvatarPicker">
+                                    {{ avatarUploading ? '上传中...' : '更换头像' }}
+                                </a-button>
                                 <div class="mt-2 text-xs text-gray-400">
                                     要求：1:1 比例，jpg/png/webp，≤ 10MB
                                 </div>
@@ -125,7 +124,6 @@ import {
     FormItem as AFormItem,
     Input as AInput,
     Row as ARow,
-    Select as ASelect,
     Space as ASpace,
     Spin as ASpin,
     Tag as ATag,
@@ -136,8 +134,6 @@ import {
 defineOptions({name: 'CoachProfileEdit'});
 
 const ENABLE_MOCK = false;
-
-type AvatarShape = 'circle' | 'square';
 
 const route = useRoute();
 const router = useRouter();
@@ -158,18 +154,43 @@ const form = reactive({
 const certText = ref('');
 const tagText = ref('');
 
-const avatarShape = ref<AvatarShape>('circle');
-const avatarShapeOptions = [
-    {label: '圆形头像', value: 'circle'},
-    {label: '方形头像', value: 'square'},
-];
-
 const avatarUploading = ref(false);
 const avatarInputRef = ref<HTMLInputElement | null>(null);
 
 /** 上传模型 */
 const avatarFile = ref<MediaItem | null>(null);
 const photoFiles = ref<MediaItem[]>([]);
+
+// 橙黄色系头像颜色
+const avatarColors = [
+    '#FF8C00', // 深橙色
+    '#FFA500', // 橙色
+    '#FFB347', // 浅橙色
+    '#FF9F43', // 橙黄色
+    '#F39C12', // 金橙色
+    '#E67E22', // 胡萝卜橙
+    '#D35400', // 南瓜橙
+    '#FF6B35', // 鲜橙色
+];
+
+function getAvatarColor(name?: string): string {
+    if (!name) return avatarColors[0];
+    const charCode = name.charCodeAt(0);
+    const index = charCode % avatarColors.length;
+    return avatarColors[index];
+}
+
+// 获取头像显示字符（英文名取第一个单词首字母）
+function getAvatarChar(name?: string): string {
+    if (!name) return '教';
+    // 判断是否为纯英文
+    if (/^[a-zA-Z\s]+$/.test(name.trim())) {
+        const firstWord = name.trim().split(/\s+/)[0];
+        return firstWord.charAt(0).toUpperCase();
+    }
+    // 中文或其他语言取第一个字符
+    return name.charAt(0);
+}
 
 const mockCoachList: CoachVO[] = [
     {
@@ -195,10 +216,8 @@ const mockCoachList: CoachVO[] = [
 ];
 
 const avatarPreview = computed(
-    () => avatarFile.value?.url?.trim() || form.avatar?.trim() || baseInfo.value?.avatar?.trim() || '',
+    () => avatarFile.value?.previewUrl?.trim() || avatarFile.value?.url?.trim() || form.avatar?.trim() || baseInfo.value?.avatar?.trim() || '',
 );
-
-const avatarFallbackFullName = computed(() => baseInfo.value?.name?.trim() || '教练');
 
 function splitCsv(text: string) {
     return (text || '')
@@ -284,11 +303,11 @@ async function onAvatarFileChange(e: Event) {
             coverUrl: '',
         };
 
-        form.avatar = uploaded.url;
+        form.avatar = uploaded.previewUrl || uploaded.url;
         message.success('头像上传成功');
-    } catch (err: any) {
-        console.error(err);
-        message.error(err?.message || '头像上传失败');
+    } catch (e: any) {
+        console.error(e);
+        message.error(e?.message || '头像上传失败');
     } finally {
         avatarUploading.value = false;
     }
@@ -342,11 +361,11 @@ async function handleSubmit() {
         const payload = {
             phone: form.phone || undefined,
             smsCode: form.smsCode || undefined,
-            avatar: avatarFile.value?.url || form.avatar || undefined,
+            avatar: avatarFile.value?.previewUrl || avatarFile.value?.url || form.avatar || undefined,
             certificates: splitCsv(certText.value),
             tags: splitCsv(tagText.value),
             introduction: form.introduction || undefined,
-            photos: photoFiles.value.map((x) => x.url).filter(Boolean),
+            photos: photoFiles.value.map((x) => x.previewUrl || x.url).filter(Boolean),
         };
 
         if (ENABLE_MOCK) {
@@ -375,13 +394,28 @@ onMounted(fetchDetailByListFallback);
 </script>
 
 <style scoped>
-.avatar-fullname {
-    display: inline-block;
-    max-width: 64px;
-    white-space: normal;
-    line-height: 1.1;
-    text-align: center;
-    font-size: 12px;
+.avatar-wrapper {
+    flex-shrink: 0;
+}
+
+.avatar-char {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 600;
+    color: #fff;
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+}
+
+.avatar-char:hover {
+    transform: scale(1.06);
+    transition: transform 0.25s ease;
 }
 
 .coach-avatar-editor {
@@ -396,7 +430,16 @@ onMounted(fetchDetailByListFallback);
     flex-shrink: 0;
 }
 
+.coach-avatar-preview:hover {
+    transform: scale(1.06);
+    transition: transform 0.25s ease;
+}
+
 .coach-avatar-meta {
     min-width: 0;
+}
+
+.hidden {
+    display: none;
 }
 </style>
