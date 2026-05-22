@@ -179,7 +179,7 @@
                             />
 
                             <div class="product-info">
-                                <div class="product-name">
+                                <div class="product-name" @click="handleDetail(record)">
                                     {{ record.name }}
                                 </div>
 
@@ -513,19 +513,19 @@ function handleTableChange(pager: TablePaginationConfig) {
 }
 
 function handleCreateProduct() {
-    router.push('/product/create');
+    router.push({ name: 'ProductCreate' });
 }
 
 function handleCreatePackageProduct() {
-    router.push('/package-product/create');
+    router.push({ name: 'PackageProductCreate' });
 }
 
 function handleDetail(record: ProductListDTO) {
-    router.push(`/product/detail/${record.id}`);
+    router.push({ name: 'ProductDetail', params: { id: record.id } });
 }
 
 function handleEdit(record: ProductListDTO) {
-    router.push(`/product/edit/${record.id}`);
+    router.push({ name: 'ProductEdit', params: { id: record.id } });
 }
 
 async function handleChangeStatus(record: ProductListDTO, status: string) {
@@ -589,7 +589,7 @@ function getStatusText(status: string) {
 .filter-form {
     margin-bottom: 24px;
     padding: 16px;
-    background: #fafafa;
+    background: var(--color-bg-container);
     border-radius: 8px;
 }
 
@@ -603,7 +603,7 @@ function getStatusText(status: string) {
     flex-shrink: 0;
     object-fit: cover;
     overflow: hidden;
-    background: #f5f5f5;
+    background: var(--color-bg-layout);
     border-radius: 6px;
 }
 
@@ -615,15 +615,21 @@ function getStatusText(status: string) {
     max-width: 250px;
     overflow: hidden;
     font-weight: 500;
-    color: rgb(0 0 0 / 88%);
+    color: var(--color-text);
+    cursor: pointer;
     text-overflow: ellipsis;
     white-space: nowrap;
+    transition: color 0.3s;
+}
+
+.product-name:hover {
+    color: #1890ff;
 }
 
 .product-no {
     margin-top: 4px;
     font-size: 12px;
-    color: #999;
+    color: var(--color-text-secondary);
 }
 
 .product-subtitle {
@@ -631,7 +637,7 @@ function getStatusText(status: string) {
     margin-top: 4px;
     overflow: hidden;
     font-size: 12px;
-    color: #666;
+    color: var(--color-text-secondary);
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -648,11 +654,11 @@ function getStatusText(status: string) {
 .original-price {
     margin-left: 8px;
     font-size: 12px;
-    color: #999;
+    color: var(--color-text-secondary);
     text-decoration: line-through;
 }
 
 .muted {
-    color: #999;
+    color: var(--color-text-secondary);
 }
 </style>
