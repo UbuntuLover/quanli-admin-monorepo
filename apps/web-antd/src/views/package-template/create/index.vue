@@ -1,30 +1,34 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
+import type {CascaderOption} from 'ant-design-vue';
 import {
     Button as AButton,
     Card as ACard,
+    Cascader as ACascader,
     Col as ACol,
     Divider as ADivider,
     Form as AForm,
     FormItem as AFormItem,
     Input as AInput,
     InputNumber as AInputNumber,
+    message,
     Row as ARow,
     Select as ASelect,
     SelectOption as ASelectOption,
     Space as ASpace,
     Switch as ASwitch,
-    Tabs as ATabs,
     TabPane as ATabPane,
-    message,
+    Tabs as ATabs,
 } from 'ant-design-vue';
 
 import {
     createComboPackageProductApi,
     createSinglePackageProductApi,
+    getAvailableChildTemplatesApi,
     type PackageProductApi,
 } from '#/api/template/template';
-import { getAllVenuesApi, type VenueDetailDTO } from '#/api/venue/list';
+import {getAllVenuesApi, type VenueDetailDTO} from '#/api/venue/list';
+import {type CategoryDTO, getCategoryTreeApi} from '#/api/products/productCategory';
 
 type CardType = 'COURSE' | 'VENUE';
 type PackageMode = 'SINGLE' | 'COMBO';
@@ -38,6 +42,20 @@ const activeTab = ref<PackageMode>('SINGLE');
 const submitting = ref(false);
 const venueLoading = ref(false);
 const venueOptions = ref<Array<{ label: string; value: number }>>([]);
+
+// 子卡模板相关
+const childTemplateLoading = ref(false);
+const childTemplateOptions = ref<Array<{ label: string; value: number; cardType: string }>>([]);
+
+// 商品分类相关
+const categoryLoading = ref(false);
+const categoryCascaderOptions = ref<CascaderOption[]>([]);
+
+// 用于显示已选分类的标签
+const selectedCategoryLabel = ref<string>('');
+
+// 级联选择的值（完整路径数组）
+const categoryValue = ref<(string)[]>([]);
 
 // 通用表单
 const baseForm = reactive({
@@ -55,8 +73,7 @@ const baseForm = reactive({
     maxDailyBookings: undefined as number | undefined,
 
     productName: '',
-    categoryId: undefined as number | undefined,
-    brandId: undefined as number | undefined,
+    brandId: '',
     subtitle: '',
     description: '',
     mainImage: '',
@@ -86,7 +103,7 @@ const singleForm = reactive({
 
 // 组合卡专属
 const comboChildren = ref<PackageProductApi.CreateComboChildItem[]>([
-    { childTemplateId: 0, quantity: 1, displayName: '', sortOrder: 0 },
+    { childTemplateId: '', quantity: 1, displayName: '', sortOrder: 0 },
 ]);
 
 const isCourse = computed(() => singleForm.cardType === 'COURSE');
@@ -142,7 +159,12 @@ function validateCommon() {
     if (!baseForm.templateName.trim()) throw new Error('模板名称不能为空');
     if (!baseForm.productName.trim()) throw new Error('商品名称不能为空');
     if (!baseForm.skuName.trim()) throw new Error('SKU名称不能为空');
-    if (!baseForm.categoryId) throw new Error('分类ID不能为空');
+    if (!categoryValue.value || categoryValue.value.length === 0) {
+        throw new Error('请选择分类');
+    }
+    if (categoryValue.value.length !== 3) {
+        throw new Error('商品必须挂在第三级分类上，请重新选择');
+    }
     if (baseForm.validityDays <= 0) throw new Error('有效天数必须大于0');
 
     if (baseForm.originalPriceYuan <= 0 || baseForm.sellingPriceYuan <= 0) {
@@ -151,6 +173,13 @@ function validateCommon() {
     if (baseForm.sellingPriceYuan > baseForm.originalPriceYuan) {
         throw new Error('售价不能高于原价');
     }
+}
+
+/**
+ * 获取选中的第三级分类ID（用于提交）
+ */
+function getCategoryId(): string {
+    return categoryValue.value[categoryValue.value.length - 1]
 }
 
 async function loadVenues() {
@@ -166,6 +195,95 @@ async function loadVenues() {
     } finally {
         venueLoading.value = false;
     }
+}
+
+async function loadChildTemplates() {
+    try {
+        childTemplateLoading.value = true;
+        const templates = await getAvailableChildTemplatesApi();
+        childTemplateOptions.value = (templates || []).map((t) => ({
+            label: `${t.name}（${t.cardType} / ¥${(t.sellingPrice / 100).toFixed(2)}）`,
+            value: t.id,
+            cardType: t.cardType,
+        }));
+    } catch (e: any) {
+        message.error(e?.message || '加载子模板失败');
+    } finally {
+        childTemplateLoading.value = false;
+    }
+}
+
+async function loadCategories() {
+    try {
+        categoryLoading.value = true;
+        const list = await getCategoryTreeApi();
+        console.log('Category tree data:', JSON.stringify(list, null, 2));
+        categoryCascaderOptions.value = buildCascaderOptions(list || []);
+        console.log('Cascader options:', JSON.stringify(categoryCascaderOptions.value, null, 2));
+    } catch (e: any) {
+        message.error(e?.message || '加载分类失败');
+    } finally {
+        categoryLoading.value = false;
+    }
+}
+
+/**
+ * 构建级联选择器选项（只显示到第三级）
+ */
+function buildCascaderOptions(categories: CategoryDTO[], level: number = 1): CascaderOption[] {
+    if (level > 3) {
+        return [];
+    }
+    
+    return categories.map((cat) => {
+        const option: CascaderOption = {
+            value: cat.id,
+            label: cat.name,
+        };
+
+        if (cat.children && cat.children.length > 0 && level < 3) {
+            option.children = buildCascaderOptions(cat.children, level + 1);
+        }
+
+        return option;
+    });
+}
+
+/**
+ * 查找分类的完整路径标签
+ */
+function findCategoryPath(values: (string | number)[], options: CascaderOption[]): string {
+    if (!values || values.length === 0) return '';
+
+    const [first, ...rest] = values;
+    const current = options.find((opt) => String(opt.value) === String(first));
+
+    if (!current) return '';
+
+    if (rest.length === 0) {
+        return current.label;
+    }
+
+    if (current.children) {
+        const childPath = findCategoryPath(rest, current.children);
+        return childPath ? `${current.label} / ${childPath}` : current.label;
+    }
+
+    return current.label;
+}
+
+/**
+ * 级联选择变化时更新显示标签
+ */
+function onCategoryChange(values: (string | number)[]) {
+    selectedCategoryLabel.value = findCategoryPath(values, categoryCascaderOptions.value);
+}
+
+/**
+ * 级联选择器搜索过滤函数
+ */
+function filter(inputValue: string, path: CascaderOption[]) {
+    return path.some((option) => (option.label as string).toLowerCase().includes(inputValue.toLowerCase()));
 }
 
 async function submitSingle() {
@@ -206,7 +324,7 @@ async function submitSingle() {
         venueTimes: isVenue.value ? singleForm.venueTimes ?? null : null,
 
         productName: baseForm.productName.trim(),
-        categoryId: baseForm.categoryId!,
+        categoryId: getCategoryId(),
         brandId: baseForm.brandId ?? null,
         subtitle: baseForm.subtitle || null,
         description: baseForm.description || null,
@@ -233,7 +351,7 @@ async function submitCombo() {
     if (!comboChildren.value.length) throw new Error('组合卡至少一个子项');
 
     const normalizedChildren = comboChildren.value.map((c, idx) => ({
-        childTemplateId: Number(c.childTemplateId),
+        childTemplateId: c.childTemplateId,
         quantity: Number(c.quantity),
         displayName: c.displayName?.trim() || null,
         sortOrder: Number.isFinite(c.sortOrder as number) ? (c.sortOrder as number) : idx,
@@ -261,7 +379,7 @@ async function submitCombo() {
         children: normalizedChildren,
 
         productName: baseForm.productName.trim(),
-        categoryId: baseForm.categoryId!,
+        categoryId: getCategoryId(),
         brandId: baseForm.brandId ?? null,
         subtitle: baseForm.subtitle || null,
         description: baseForm.description || null,
@@ -299,6 +417,8 @@ async function handleSubmit() {
 
 onMounted(() => {
     loadVenues();
+    loadChildTemplates();
+    loadCategories();
 });
 </script>
 
@@ -324,7 +444,7 @@ onMounted(() => {
                         </a-form-item>
                     </a-col>
                     <a-col :span="8">
-                        <a-form-item label="适用场馆">
+                        <a-form-item label="适用场馆(不填则为通用)">
                             <a-select
                                 v-model:value="baseForm.applicableVenues"
                                 mode="multiple"
@@ -395,11 +515,13 @@ onMounted(() => {
                         </a-col>
                     </template>
 
-                    <a-col :span="8">
-                        <a-form-item label="可选教练">
-                            <a-switch :checked="singleForm.canSpecifyCoach === 1" @change="(checked:boolean)=>singleForm.canSpecifyCoach = checked ? 1 : 0" />
-                        </a-form-item>
-                    </a-col>
+                    <template v-if="isCourse">
+                        <a-col :span="8">
+                            <a-form-item label="可选教练">
+                                <a-switch :checked="singleForm.canSpecifyCoach === 1" @change="(checked:boolean)=>singleForm.canSpecifyCoach = checked ? 1 : 0" />
+                            </a-form-item>
+                        </a-col>
+                    </template>
                 </a-row>
 
                 <div v-if="activeTab === 'COMBO'">
@@ -407,9 +529,17 @@ onMounted(() => {
                     <a-space direction="vertical" style="width: 100%">
                         <a-card v-for="(child, index) in comboChildren" :key="index" size="small">
                             <a-row :gutter="12">
-                                <a-col :span="6">
-                                    <a-form-item :label="`子模板ID #${index + 1}`" required>
-                                        <a-input-number v-model:value="child.childTemplateId" :min="1" style="width: 100%" />
+                                <a-col :span="8">
+                                    <a-form-item :label="`子卡模板 #${index + 1}`" required>
+                                        <a-select
+                                            v-model:value="child.childTemplateId"
+                                            :options="childTemplateOptions"
+                                            :loading="childTemplateLoading"
+                                            placeholder="请选择子卡模板"
+                                            style="width: 100%"
+                                            show-search
+                                            :filter-option="(input, option) => (option?.label as string)?.toLowerCase()?.includes(input.toLowerCase())"
+                                        />
                                     </a-form-item>
                                 </a-col>
                                 <a-col :span="4">
@@ -417,7 +547,7 @@ onMounted(() => {
                                         <a-input-number v-model:value="child.quantity" :min="1" style="width: 100%" />
                                     </a-form-item>
                                 </a-col>
-                                <a-col :span="8">
+                                <a-col :span="6">
                                     <a-form-item label="显示名">
                                         <a-input v-model:value="child.displayName" placeholder="可为空，默认模板名" />
                                     </a-form-item>
@@ -433,6 +563,9 @@ onMounted(() => {
                             </a-row>
                         </a-card>
                         <a-button type="dashed" block @click="addChild">+ 新增子项</a-button>
+                        <div v-if="childTemplateOptions.length === 0 && !childTemplateLoading" class="text-xs text-gray-400">
+                            暂无可用的子卡模板，请先创建单卡模板
+                        </div>
                     </a-space>
                 </div>
 
@@ -443,12 +576,28 @@ onMounted(() => {
                             <a-input v-model:value="baseForm.productName" />
                         </a-form-item>
                     </a-col>
-                    <a-col :span="8">
-                        <a-form-item label="分类ID" required>
-                            <a-input-number v-model:value="baseForm.categoryId" :min="1" style="width: 100%" />
+                    <a-col :span="12">
+                        <a-form-item label="分类" required>
+                            <div class="category-cascader-wrapper">
+                                <a-cascader
+                                    v-model:value="categoryValue"
+                                    :options="categoryCascaderOptions"
+                                    :loading="categoryLoading"
+                                    placeholder="请选择分类（必须选择第三级）"
+                                    :show-search="{ filter }"
+                                    style="width: 100%"
+                                    expand-trigger="click"
+                                    :field-names="{ label: 'label', value: 'value', children: 'children' }"
+                                    :not-found-content="'未找到匹配的分类'"
+                                    @change="onCategoryChange"
+                                />
+                                <div v-if="selectedCategoryLabel" class="category-selected-label">
+                                    已选：{{ selectedCategoryLabel }}
+                                </div>
+                            </div>
                         </a-form-item>
                     </a-col>
-                    <a-col :span="8">
+                    <a-col :span="4">
                         <a-form-item label="品牌ID">
                             <a-input-number v-model:value="baseForm.brandId" :min="1" style="width: 100%" />
                         </a-form-item>
@@ -541,5 +690,16 @@ onMounted(() => {
 <style scoped>
 .page-wrap {
     padding: 16px;
+}
+
+.category-cascader-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.category-selected-label {
+    font-size: 12px;
+    color: var(--ant-color-primary);
 }
 </style>

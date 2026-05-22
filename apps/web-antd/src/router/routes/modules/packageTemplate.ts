@@ -5,7 +5,7 @@ const routes: RouteRecordRaw[] = [
         name: 'PackageTemplate',
         path: '/package-create',
         meta: {
-            icon: 'lucide:id-card',
+            icon: 'lucide:card-sim',
             order: 40,
             title: '权益卡模板管理',
         },
@@ -22,7 +22,7 @@ const routes: RouteRecordRaw[] = [
             },
             {
                 name: 'PackageTemplateTemplate',
-                path: '/create-create',
+                path: '/create',
                 component: () => import('#/views/package-template/create/index.vue'),
                 meta: {
                     icon: 'lucide:badge-plus',
