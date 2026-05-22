@@ -26,7 +26,7 @@ const routes: RouteRecordRaw[] = [
                 name: 'ProductCreate',
                 component: () => import('#/views/products/create/index.vue'),
                 meta: {
-                    title: '新建商品',
+                    title: '新建商品(实体)',
                     icon: 'lucide:calendar-plus',
                 },
             },
