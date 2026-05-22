@@ -40,6 +40,17 @@ const routes: RouteRecordRaw[] = [
                     title: '编辑权益卡模板',
                 },
             },
+            {
+                name: 'PackageTemplateDetail',
+                path: '/detail',
+                component: () => import('#/views/package-template/detail/index.vue'),
+                meta: {
+                    hideInMenu: true,
+                    icon: 'lucide:info',
+                    keepAlive: true,
+                    title: '权益卡详情',
+                },
+            },
 
 
         ],

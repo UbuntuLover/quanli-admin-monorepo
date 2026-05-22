@@ -292,15 +292,7 @@ async function fetchTemplateList() {
             ...queryForm,
         });
 
-        // 调试输出
-        console.log('=== 权益卡模板列表响应 ===');
-        console.log('完整响应:', JSON.stringify(res, null, 2));
-        console.log('list 字段:', res?.list);
-        console.log('data.list 字段:', (res as any)?.data?.list);
-        console.log('items 字段:', (res as any)?.items);
-        console.log('total 字段:', res?.total);
 
-        // 尝试多种可能的数据结构
         const list = res?.list || (res as any)?.data?.list || (res as any)?.items || [];
         const total = res?.total || (res as any)?.data?.total || (res as any)?.totalCount || 0;
 
@@ -342,7 +334,7 @@ function handleCreate() {
 }
 
 function handleDetail(record: PackageTemplateListDTO) {
-    router.push({ name: 'PackageTemplateInfo', query: { id: record.id } });
+    router.push({ name: 'PackageTemplateDetail', query: { id: record.id } });
 }
 
 function handleEdit(record: PackageTemplateListDTO) {
