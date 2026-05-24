@@ -1,67 +1,94 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getVenueDetailApi, type VenueDetailDTO } from '#/api/venue/list';
-import { Card as ACard, Descriptions as ADescriptions, DescriptionsItem as ADescriptionsItem, Image as AImage, PageHeader as APageHeader, Spin as ASpin, Tag as ATag, Space as ASpace, Button as AButton, Divider as ADivider, Row as ARow, Col as ACol, Collapse as ACollapse, CollapsePanel as ACollapsePanel, Avatar as AAvatar, List as AList, ListItem as AListItem, ListItemMeta as AListItemMeta } from 'ant-design-vue';
+import { getVenueDetailForAdminApi, type VenueDetailForAdminDTO, type BusinessHourConfig } from '#/api/venue/create';
+import {
+    Card as ACard,
+    Descriptions as ADescriptions,
+    DescriptionsItem as ADescriptionsItem,
+    Image as AImage,
+    PageHeader as APageHeader,
+    Spin as ASpin,
+    Tag as ATag,
+    Space as ASpace,
+    Button as AButton,
+    Divider as ADivider,
+    Row as ARow,
+    Col as ACol,
+    Table as ATable,
+    TableColumn as ATableColumn,
+} from 'ant-design-vue';
 import { message } from 'ant-design-vue';
 
 const route = useRoute();
 const router = useRouter();
 
 const loading = ref(false);
-const venueDetail = ref<VenueDetailDTO | null>(null);
+const venueDetail = ref<VenueDetailForAdminDTO | null>(null);
 
-// 获取场馆ID
 const venueId = computed(() => {
     const id = route.query.id;
     return id ? Number(id) : null;
 });
 
-// 状态颜色映射
-const statusColor = (status: string) => {
+function statusColor(status: number) {
     switch (status) {
-        case '营业中':
+        case 1:
             return 'success';
-        case '休业中':
+        case 2:
             return 'warning';
-        case '装修中':
+        case 3:
             return 'error';
         default:
             return 'default';
     }
-};
+}
 
-// 格式化营业时间
-const formatBusinessHours = (businessHours: VenueDetailDTO['businessHours']) => {
-    if (!businessHours) return '-';
-    if (!businessHours.isOpen) return '休息中';
-    if (!businessHours.startTime || !businessHours.endTime) return '未设置';
-    return `${businessHours.startTime} - ${businessHours.endTime}`;
-};
+function statusText(status: number) {
+    switch (status) {
+        case 1:
+            return '营业中';
+        case 2:
+            return '休业中';
+        case 3:
+            return '装修中';
+        default:
+            return '未知';
+    }
+}
 
-// 获取封面图片
 const coverImage = computed(() => {
     if (!venueDetail.value) return '';
     return venueDetail.value.backgroundImage || venueDetail.value.logo || '';
 });
 
-// 获取缩略图列表
-const thumbnailList = computed(() => {
-    if (!venueDetail.value?.thumbnails?.length) return [];
-    return venueDetail.value.thumbnails;
+const photoList = computed(() => {
+    if (!venueDetail.value?.photos?.length) return [];
+    return venueDetail.value.photos;
 });
 
-// 教练头像占位图
-const defaultCoachAvatar = 'https://picsum.photos/64/64?random=coach';
+const weekDayLabels: Record<string, string> = {
+    monday: '周一',
+    tuesday: '周二',
+    wednesday: '周三',
+    thursday: '周四',
+    friday: '周五',
+    saturday: '周六',
+    sunday: '周日',
+};
 
-// 默认场馆封面
-const defaultCover = 'https://picsum.photos/800/400?random=venue';
+const businessHoursList = computed(() => {
+    if (!venueDetail.value?.businessHours) return [];
+    return Object.entries(venueDetail.value.businessHours).map(([key, config]) => ({
+        day: weekDayLabels[key] || key,
+        ...config,
+    }));
+});
 
-// 加载场馆详情
 async function loadVenueDetail(id: number) {
     try {
         loading.value = true;
-        const data = await getVenueDetailApi(id);
+        const data = await getVenueDetailForAdminApi(id);
         venueDetail.value = data;
     } catch (e: any) {
         message.error(e?.message || '加载场馆详情失败');
@@ -70,12 +97,10 @@ async function loadVenueDetail(id: number) {
     }
 }
 
-// 返回列表
 function handleBack() {
     router.push({ name: 'VenueList' });
 }
 
-// 编辑场馆
 function handleEdit() {
     if (venueDetail.value) {
         router.push({
@@ -83,14 +108,6 @@ function handleEdit() {
             query: { id: venueDetail.value.id },
         });
     }
-}
-
-// 跳转到教练详情
-function handleViewCoach(coachId: number) {
-    router.push({
-        name: 'CoachDetail',
-        query: { id: coachId },
-    });
 }
 
 onMounted(() => {
@@ -124,42 +141,76 @@ onMounted(() => {
                 <!-- 基本信息 -->
                 <a-divider orientation="left">基本信息</a-divider>
                 <a-descriptions :column="2" bordered>
+                    <a-descriptions-item label="场馆编号">
+                        {{ venueDetail.venueNo }}
+                    </a-descriptions-item>
                     <a-descriptions-item label="场馆名称">
                         <span class="name">{{ venueDetail.name }}</span>
-                    </a-descriptions-item>
-                    <a-descriptions-item label="状态">
-                        <a-tag :color="statusColor(venueDetail.status)">
-                            {{ venueDetail.status || '未知' }}
-                        </a-tag>
                     </a-descriptions-item>
                     <a-descriptions-item label="联系电话">
                         {{ venueDetail.phone || '-' }}
                     </a-descriptions-item>
                     <a-descriptions-item label="营业状态">
-                        <a-tag :color="venueDetail.businessStatus === 1 ? 'success' : 'warning'">
-                            {{ venueDetail.businessStatus === 1 ? '营业中' : venueDetail.businessStatus === 2 ? '休业中' : '装修中' }}
+                        <a-tag :color="statusColor(venueDetail.businessStatus)">
+                            {{ venueDetail.businessStatusText || statusText(venueDetail.businessStatus) }}
+                        </a-tag>
+                    </a-descriptions-item>
+                    <a-descriptions-item label="省份">
+                        {{ venueDetail.province || '-' }}
+                    </a-descriptions-item>
+                    <a-descriptions-item label="城市">
+                        {{ venueDetail.city || '-' }}
+                    </a-descriptions-item>
+                    <a-descriptions-item label="区县">
+                        {{ venueDetail.district || '-' }}
+                    </a-descriptions-item>
+                    <a-descriptions-item label="场馆状态">
+                        <a-tag :color="venueDetail.status === 1 ? 'success' : 'warning'">
+                            {{ venueDetail.status === 1 ? '正常' : '停用' }}
                         </a-tag>
                     </a-descriptions-item>
                     <a-descriptions-item label="地址" :span="2">
                         {{ venueDetail.address || '-' }}
+                    </a-descriptions-item>
+                    <a-descriptions-item label="面积">
+                        {{ venueDetail.areaSqm ? `${venueDetail.areaSqm} ㎡` : '-' }}
+                    </a-descriptions-item>
+                    <a-descriptions-item label="容纳人数">
+                        {{ venueDetail.capacity ?? '-' }}
                     </a-descriptions-item>
                     <a-descriptions-item v-if="venueDetail.description" label="简介" :span="2">
                         {{ venueDetail.description }}
                     </a-descriptions-item>
                 </a-descriptions>
 
-                <!-- 营业时间 -->
-                <a-divider orientation="left">营业时间</a-divider>
-                <a-descriptions :column="1" bordered>
-                    <a-descriptions-item label="今日营业时间">
-                        <a-tag :color="venueDetail.businessHours?.isOpen ? 'success' : 'warning'">
-                            {{ formatBusinessHours(venueDetail.businessHours) }}
-                        </a-tag>
-                        <span v-if="venueDetail.businessHours?.dayOfWeek" class="ml-2 text-gray-500">
-                            ({{ venueDetail.businessHours.dayOfWeek }})
-                        </span>
-                    </a-descriptions-item>
-                </a-descriptions>
+                <!-- 每周营业时间 -->
+                <a-divider orientation="left">每周营业时间</a-divider>
+                <a-table
+                    v-if="businessHoursList.length"
+                    :dataSource="businessHoursList"
+                    :pagination="false"
+                    :scroll="{ y: 240 }"
+                    row-key="day"
+                    size="small"
+                >
+                    <a-table-column title="星期" data-index="day" width="100" />
+                    <a-table-column title="状态" data-index="isOpen" width="120">
+                        <template #default="{ record }">
+                            <a-tag :color="record.isOpen ? 'success' : 'default'">
+                                {{ record.isOpen ? '营业' : '休息' }}
+                            </a-tag>
+                        </template>
+                    </a-table-column>
+                    <a-table-column title="营业时间">
+                        <template #default="{ record }">
+                            <template v-if="record.isOpen">
+                                {{ record.startTime || '--' }} - {{ record.endTime || '--' }}
+                            </template>
+                            <span v-else class="text-gray-400">-</span>
+                        </template>
+                    </a-table-column>
+                </a-table>
+                <div v-else class="text-gray-400 py-4">暂无营业时间数据</div>
 
                 <!-- 位置信息 -->
                 <template v-if="venueDetail.longitude && venueDetail.latitude">
@@ -174,6 +225,16 @@ onMounted(() => {
                     </a-descriptions>
                 </template>
 
+                <!-- 设施 -->
+                <template v-if="venueDetail.facilities?.length">
+                    <a-divider orientation="left">设施</a-divider>
+                    <div class="tags-section">
+                        <a-tag v-for="facility in venueDetail.facilities" :key="facility" color="green">
+                            {{ facility }}
+                        </a-tag>
+                    </div>
+                </template>
+
                 <!-- 标签 -->
                 <template v-if="venueDetail.tags?.length">
                     <a-divider orientation="left">场馆标签</a-divider>
@@ -184,13 +245,13 @@ onMounted(() => {
                     </div>
                 </template>
 
-                <!-- 缩略图 -->
-                <template v-if="thumbnailList.length">
-                    <a-divider orientation="left">场馆图册</a-divider>
+                <!-- 场馆图片 -->
+                <template v-if="photoList.length">
+                    <a-divider orientation="left">场馆图片</a-divider>
                     <div class="thumbnails-section">
                         <a-image.PreviewGroup>
                             <a-row :gutter="[8, 8]">
-                                <a-col v-for="(img, index) in thumbnailList" :key="index" :span="8">
+                                <a-col v-for="(img, index) in photoList" :key="index" :span="8">
                                     <a-image :src="img" :alt="`场馆图片${index + 1}`" class="thumbnail-image" />
                                 </a-col>
                             </a-row>
@@ -198,46 +259,24 @@ onMounted(() => {
                     </div>
                 </template>
 
-                <!-- 教练列表 -->
-                <template v-if="venueDetail.coaches?.length">
-                    <a-divider orientation="left">
-                        场馆教练 ({{ venueDetail.coaches.length }})
-                    </a-divider>
-                    <a-list
-                        :data-source="venueDetail.coaches"
-                        item-layout="horizontal"
-                        :grid="{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 4 }"
-                    >
-                        <template #renderItem="{ item }">
-                            <a-list-item>
-                                <a-card hoverable class="coach-card" @click="handleViewCoach(item.id)">
-                                    <template #cover>
-                                        <a-avatar :src="item.avatar" :size="80" class="coach-avatar">
-                                            {{ item.name?.charAt(0) || '?' }}
-                                        </a-avatar>
-                                    </template>
-                                    <div class="coach-meta">
-                                        <div class="coach-name">{{ item.name }}</div>
-                                        <div v-if="item.introduction" class="coach-intro">
-                                            {{ item.introduction.length > 50 
-                                                ? item.introduction.slice(0, 50) + '...' 
-                                                : item.introduction }}
-                                        </div>
-                                        <div v-if="item.tags?.length" class="coach-tags">
-                                            <a-tag 
-                                                v-for="tag in item.tags.slice(0, 3)" 
-                                                :key="tag" 
-                                                size="small"
-                                            >
-                                                {{ tag }}
-                                            </a-tag>
-                                        </div>
-                                    </div>
-                                </a-card>
-                            </a-list-item>
-                        </template>
-                    </a-list>
+                <!-- 场馆公告 -->
+                <template v-if="venueDetail.notice">
+                    <a-divider orientation="left">场馆公告</a-divider>
+                    <div class="notice-section">
+                        {{ venueDetail.notice }}
+                    </div>
                 </template>
+
+                <!-- 时间信息 -->
+                <a-divider orientation="left">时间信息</a-divider>
+                <a-descriptions :column="2" bordered>
+                    <a-descriptions-item label="创建时间">
+                        {{ venueDetail.createdAt || '-' }}
+                    </a-descriptions-item>
+                    <a-descriptions-item label="更新时间">
+                        {{ venueDetail.updatedAt || '-' }}
+                    </a-descriptions-item>
+                </a-descriptions>
             </a-card>
         </a-spin>
     </div>
@@ -294,33 +333,14 @@ onMounted(() => {
     border-radius: 4px;
 }
 
-.coach-card {
-    text-align: center;
-    cursor: pointer;
-}
-
-.coach-meta {
+.notice-section {
     padding: 12px;
-}
-
-.coach-name {
-    font-size: 14px;
-    font-weight: 500;
-    margin-top: 8px;
-}
-
-.coach-avatar {
-    margin: 16px auto 0;
-}
-
-.coach-intro {
-    font-size: 12px;
+    background: #fafafa;
+    border-radius: 4px;
     color: #666;
-    line-height: 1.4;
-    margin-top: 8px;
 }
 
-.coach-tags {
-    margin-top: 8px;
+.text-gray-400 {
+    color: #9ca3af;
 }
 </style>

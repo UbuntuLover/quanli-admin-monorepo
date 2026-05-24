@@ -39,6 +39,16 @@ const routes: RouteRecordRaw[] = [
                     keepAlive: true,
                     title: '场馆详情',
                 },
+            },
+            {
+                name: 'VenueEdit',
+                path: '/venue/edit',
+                component: () => import('#/views/venue/edit/index.vue'),
+                meta: {
+                    hideInMenu: true,
+                    keepAlive: true,
+                    title: '场馆编辑',
+                },
             }
 
 
