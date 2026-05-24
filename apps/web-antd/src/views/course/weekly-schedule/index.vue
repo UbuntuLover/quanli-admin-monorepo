@@ -2,14 +2,20 @@
     <div class="schedule-overview-page">
         <a-card :bordered="false" class="filter-card">
             <a-form layout="inline">
-                <a-form-item label="场馆ID">
-                    <a-input-number
+                <a-form-item label="场馆">
+                    <a-select
                         v-model:value="queryForm.venueId"
-                        :min="1"
-                        :precision="0"
-                        style="width: 160px"
-                        placeholder="请输入场馆ID"
-                    />
+                        style="width: 200px"
+                        placeholder="请选择场馆"
+                    >
+                        <a-select-option
+                            v-for="venue in venueOptions"
+                            :key="venue.id"
+                            :value="venue.id"
+                        >
+                            {{ venue.name }} (ID: {{ venue.id }})
+                        </a-select-option>
+                    </a-select>
                 </a-form-item>
 
                 <a-form-item label="日期范围">
@@ -228,7 +234,11 @@
                             v-for="slot in selectedDay.slots"
                             :key="slot.slot"
                             class="slot-item"
-                            :class="getSlotClass(slot.status)"
+                            :class="[
+                                getSlotClass(slot.status),
+                                slot.status === ScheduleConstants.SLOT_STATUS_AVAILABLE ? 'slot-clickable' : ''
+                            ]"
+                            @click="openBookingModal(slot)"
                         >
                             <div class="slot-time">
                                 {{ slot.slot }}
@@ -256,6 +266,12 @@
                             >
                                 不可预约
                             </div>
+                            <div
+                                v-else-if="slot.status === ScheduleConstants.SLOT_STATUS_AVAILABLE"
+                                class="slot-extra"
+                            >
+                                点击预约
+                            </div>
                         </div>
                     </div>
                 </template>
@@ -263,6 +279,135 @@
                 <a-empty v-else description="请选择某天查看详情"/>
             </a-spin>
         </a-drawer>
+
+        <!-- 创建预约弹窗 -->
+        <a-modal
+            v-model:open="bookingModalOpen"
+            title="创建预约"
+            width="640px"
+            :footer="null"
+            destroy-on-close
+        >
+            <div class="booking-modal-content">
+                <!-- 步骤条 -->
+                <a-steps :current="bookingStep" class="mb-6">
+                    <a-step title="选择会员" />
+                    <a-step title="选择课程" />
+                    <a-step title="确认预约" />
+                </a-steps>
+
+                <!-- 步骤1：选择会员 -->
+                <div v-show="bookingStep === 0" class="step-content">
+                    <a-form layout="vertical">
+                        <a-form-item label="搜索会员">
+                            <a-select
+                                v-model:value="bookingForm.memberId"
+                                placeholder="输入手机号、姓名或昵称搜索会员"
+                                style="width: 100%"
+                                show-search
+                                :filter-option="false"
+                                :not-found-content="memberSearchLoading ? '搜索中...' : '未找到匹配会员'"
+                                :loading="memberSearchLoading"
+                                @search="handleMemberSearch"
+                                @focus="handleSearchFocus"
+                            >
+                                <template #options>
+                                    <a-select-option
+                                        v-for="member in memberOptions"
+                                        :key="member.id"
+                                        :value="member.id"
+                                    >
+                                        <div class="member-option">
+                                            <span class="member-name">
+                                                {{ member.name || member.nickname || '未命名' }}
+                                            </span>
+                                            <span class="member-phone">{{ member.phone }}</span>
+                                            <a-tag :color="getMatchTypeColor(member.matchType)" class="match-type-tag">
+                                                {{ getMatchTypeText(member.matchType) }}
+                                            </a-tag>
+                                        </div>
+                                    </a-select-option>
+                                </template>
+                                <template #emptyIcon>
+                                    <SearchOutlined />
+                                </template>
+                            </a-select>
+                        </a-form-item>
+                        <div v-if="!memberSearched && memberOptions.length === 0" class="search-hint">
+                            <InfoCircleOutlined /> 输入手机号、姓名或昵称后自动搜索
+                        </div>
+                    </a-form>
+                    <div class="step-actions">
+                        <a-button @click="cancelBooking">取消</a-button>
+                        <a-button
+                            type="primary"
+                            :disabled="!bookingForm.memberId"
+                            @click="nextStep"
+                        >
+                            下一步
+                        </a-button>
+                    </div>
+                </div>
+
+                <!-- 步骤2：选择课程 -->
+                <div v-show="bookingStep === 1" class="step-content">
+                    <a-form layout="vertical">
+                        <a-form-item label="选择课程/套餐">
+                            <a-select
+                                v-model:value="bookingForm.packageId"
+                                placeholder="请选择课程或套餐"
+                                style="width: 100%"
+                            >
+                                <a-select-option
+                                    v-for="pkg in packageOptions"
+                                    :key="pkg.id"
+                                    :value="pkg.id"
+                                >
+                                    {{ pkg.name }} ({{ pkg.remainingCount || 0 }}次)
+                                </a-select-option>
+                            </a-select>
+                        </a-form-item>
+                    </a-form>
+                    <div class="step-actions">
+                        <a-button @click="prevStep">上一步</a-button>
+                        <a-button
+                            type="primary"
+                            :disabled="!bookingForm.packageId"
+                            @click="nextStep"
+                        >
+                            下一步
+                        </a-button>
+                    </div>
+                </div>
+
+                <!-- 步骤3：确认预约 -->
+                <div v-show="bookingStep === 2" class="step-content">
+                    <a-descriptions bordered :column="1" size="small">
+                        <a-descriptions-item label="会员">
+                            {{ selectedMemberName }}
+                        </a-descriptions-item>
+                        <a-descriptions-item label="教练">
+                            {{ selectedCoach?.coachName }}
+                        </a-descriptions-item>
+                        <a-descriptions-item label="日期">
+                            {{ selectedDay?.date }}
+                        </a-descriptions-item>
+                        <a-descriptions-item label="预约时间">
+                            {{ selectedSlot?.startTime }} - {{ selectedSlot?.endTime }}
+                        </a-descriptions-item>
+                        <a-descriptions-item label="课程/套餐">
+                            {{ selectedPackageName }}
+                        </a-descriptions-item>
+                    </a-descriptions>
+                    <div class="step-actions">
+                        <a-button @click="prevStep">上一步</a-button>
+                        <a-button type="primary" :loading="submitLoading" @click="submitBooking">
+                            确认预约
+                        </a-button>
+                    </div>
+                </div>
+            </div>
+        </a-modal>
     </div>
 </template>
 
@@ -270,7 +415,7 @@
 import type {TableColumnsType} from 'ant-design-vue';
 
 import type {
-    AdminScheduleOverviewVO,
+    AdminScheduleOverviewVO, AdminScheduleSlotVO,
     CoachDayScheduleVO,
     CoachScheduleRowVO,
 } from '#/api/admin/schedule';
@@ -280,6 +425,16 @@ import {
     getAdminScheduleOverviewApi,
     ScheduleConstants,
 } from '#/api/admin/schedule';
+
+import { getVenueOptionsApi } from '#/api/venue/create';
+import {
+    searchAdminMembersApi,
+    normalizePageResult,
+    type MemberSearchRequest,
+    type MemberSearchResultDTO,
+} from '#/api/member/member';
+
+import { InfoCircleOutlined, SearchOutlined } from '@ant-design/icons-vue';
 
 import {
     Avatar as AAvatar,
@@ -291,10 +446,13 @@ import {
     Drawer as ADrawer,
     Empty as AEmpty,
     Form as AForm,
-    InputNumber as AInputNumber,
     List as AList,
+    Modal as AModal,
+    Select as ASelect,
     Space as ASpace,
     Spin as ASpin,
+    Steps as ASteps,
+    Step as AStep,
     Table as ATable,
     Tag as ATag,
     message,
@@ -308,6 +466,7 @@ const ARangePicker = ADatePicker.RangePicker;
 const ADescriptionsItem = ADescriptions.Item;
 const AListItem = AList.Item;
 const AListItemMeta = AList.Item.Meta;
+const ASelectOption = ASelect.Option;
 
 interface ScheduleTableRow extends CoachScheduleRowVO {
     [key: string]: unknown;
@@ -317,13 +476,32 @@ const loading = ref(false);
 const detailLoading = ref(false);
 const detailDrawerOpen = ref(false);
 
+const venueOptions = ref<Array<{id: number; name: string}>>([]);
+
 const overview = ref<AdminScheduleOverviewVO | null>(null);
 
 const selectedCoach = ref<CoachScheduleRowVO | null>(null);
 const selectedDay = ref<CoachDayScheduleVO | null>(null);
+const selectedSlot = ref<AdminScheduleSlotVO | null>(null);
+
+// 预约创建弹窗
+const bookingModalOpen = ref(false);
+const bookingStep = ref(0);
+const submitLoading = ref(false);
+const memberSearchLoading = ref(false);
+const memberSearched = ref(false);
+const memberOptions = ref<MemberSearchResultDTO[]>([]);
+const packageOptions = ref<Array<{id: number; name: string; remainingCount: number}>>([]);
+
+let searchTimer: number | null = null;
+
+const bookingForm = reactive({
+    memberId: undefined as string | undefined,
+    packageId: undefined as string | undefined,
+});
 
 const queryForm = reactive({
-    venueId: 1,
+    venueId: undefined as string | undefined,
 });
 
 const dateRange = ref<[string, string] | undefined>();
@@ -570,20 +748,24 @@ function getSlotClass(status?: string) {
 }
 
 async function handleSearch() {
-    if (!queryForm.venueId) {
-        message.warning('请输入场馆ID');
-        return;
-    }
-
     loading.value = true;
 
     try {
-        const params = {
-            venueId: queryForm.venueId,
+        const params: Record<string, unknown> = {
             includeSlots: false,
-            startDate: dateRange.value?.[0],
-            endDate: dateRange.value?.[1],
         };
+        
+        if (queryForm.venueId !== undefined) {
+            params.venueId = queryForm.venueId;
+        }
+        
+        if (dateRange.value?.[0]) {
+            params.startDate = dateRange.value[0];
+        }
+        
+        if (dateRange.value?.[1]) {
+            params.endDate = dateRange.value[1];
+        }
 
         overview.value = await getAdminScheduleOverviewApi(params);
     } finally {
@@ -592,9 +774,17 @@ async function handleSearch() {
 }
 
 function handleReset() {
-    queryForm.venueId = 1;
+    queryForm.venueId = undefined;
     dateRange.value = undefined;
-    handleSearch();
+    overview.value = null;
+}
+
+async function loadVenueOptions() {
+    try {
+        venueOptions.value = await getVenueOptionsApi();
+    } catch (e) {
+        console.error('加载场馆列表失败:', e);
+    }
 }
 
 async function handleOpenDayDetail(
@@ -639,7 +829,160 @@ async function handleOpenDayDetail(
     }
 }
 
-onMounted(() => {
+// ==================== 预约创建相关 ====================
+
+const selectedMemberName = computed(() => {
+    const member = memberOptions.value.find((m) => m.id === bookingForm.memberId);
+    return member?.name || member?.nickname || '-';
+});
+
+const selectedPackageName = computed(() => {
+    const pkg = packageOptions.value.find((p) => p.id === bookingForm.packageId);
+    return pkg?.name || '-';
+});
+
+async function handleMemberSearch(value: string) {
+    if (!value || value.length < 1) {
+        memberOptions.value = [];
+        memberSearched.value = false;
+        return;
+    }
+    
+    if (searchTimer) {
+        clearTimeout(searchTimer);
+    }
+    
+    searchTimer = window.setTimeout(async () => {
+        memberSearchLoading.value = true;
+        try {
+            const params: MemberSearchRequest = {
+                phone: value,
+                name: value,
+                nickname: value,
+                page: 1,
+                pageSize: 20,
+            };
+            const res = await searchAdminMembersApi(params);
+            console.log('原始接口返回:', res);
+            // 处理可能的包装响应
+            const data = (res as any).data || res;
+            const normalized = normalizePageResult(data);
+            console.log('归一化后:', normalized);
+            memberOptions.value = normalized.list || [];
+            console.log('memberOptions:', memberOptions.value);
+            memberSearched.value = true;
+            if (memberOptions.value.length === 0) {
+                message.info('未找到匹配的会员');
+            }
+        } catch (e) {
+            message.error('搜索会员失败');
+        } finally {
+            memberSearchLoading.value = false;
+        }
+    }, 300);
+}
+
+function handleSearchFocus() {
+    // 如果已经有搜索结果，保持显示
+    if (memberOptions.value.length > 0) {
+        return;
+    }
+    memberSearched.value = false;
+}
+
+function getMatchTypeColor(matchType: string) {
+    switch (matchType) {
+        case 'PHONE':
+            return 'blue';
+        case 'NAME':
+            return 'green';
+        case 'NICKNAME':
+            return 'orange';
+        default:
+            return 'default';
+    }
+}
+
+function getMatchTypeText(matchType: string) {
+    switch (matchType) {
+        case 'PHONE':
+            return '手机号匹配';
+        case 'NAME':
+            return '姓名匹配';
+        case 'NICKNAME':
+            return '昵称匹配';
+        default:
+            return '匹配';
+    }
+}
+
+function nextStep() {
+    if (bookingStep.value === 0 && bookingForm.memberId) {
+        bookingStep.value = 1;
+    } else if (bookingStep.value === 1 && bookingForm.packageId) {
+        bookingStep.value = 2;
+    }
+}
+
+function prevStep() {
+    if (bookingStep.value > 0) {
+        bookingStep.value--;
+    }
+}
+
+function openBookingModal(slot: AdminScheduleSlotVO) {
+    if (slot.status !== ScheduleConstants.SLOT_STATUS_AVAILABLE) {
+        return;
+    }
+    selectedSlot.value = slot;
+    bookingForm.memberId = undefined;
+    bookingForm.packageId = undefined;
+    bookingStep.value = 0;
+    memberSearched.value = false;
+    memberOptions.value = [];
+    packageOptions.value = [];
+    bookingModalOpen.value = true;
+}
+
+function cancelBooking() {
+    bookingModalOpen.value = false;
+    bookingStep.value = 0;
+}
+
+async function submitBooking() {
+    if (!selectedSlot.value || !bookingForm.memberId || !bookingForm.packageId) {
+        message.warning('请完成所有必填项');
+        return;
+    }
+
+    submitLoading.value = true;
+    try {
+        // TODO: 调用实际的预约创建API
+        // 这里暂时使用模拟数据
+        console.log('预约信息:', {
+            memberId: bookingForm.memberId,
+            packageId: bookingForm.packageId,
+            coachId: selectedCoach.value?.coachId,
+            venueId: queryForm.venueId,
+            date: selectedDay.value?.date,
+            startTime: selectedSlot.value.startTime,
+            endTime: selectedSlot.value.endTime,
+        });
+        message.success('预约创建成功');
+        bookingModalOpen.value = false;
+        // 刷新排班详情
+        if (selectedCoach.value && selectedDay.value) {
+            await handleOpenDayDetail(selectedCoach.value, selectedDay.value);
+        }
+    } catch (e) {
+        message.error('预约创建失败');
+    } finally {
+        submitLoading.value = false;
+    }
+}
+
+onMounted(async () => {
+    await loadVenueOptions();
     handleSearch();
 });
 </script>
@@ -1018,6 +1361,69 @@ onMounted(() => {
     .slot-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+}
+
+/* 预约弹窗 */
+.slot-clickable {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.slot-clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sv-shadow-hover);
+}
+
+.booking-modal-content {
+    padding: 16px 0;
+}
+
+.step-content {
+    min-height: 240px;
+}
+
+.step-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--sv-border);
+}
+
+.member-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.member-name {
+    font-weight: 500;
+    flex: 0 0 auto;
+}
+
+.member-phone {
+    color: var(--sv-text-secondary);
+    font-size: 12px;
+    flex: 1;
+}
+
+.match-type-tag {
+    margin-left: auto;
+}
+
+.search-hint {
+    color: var(--sv-text-secondary, #999);
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+.search-hint :deep(svg) {
+    margin-right: 4px;
+}
+
+.mb-6 {
+    margin-bottom: 24px;
 }
 </style>
 

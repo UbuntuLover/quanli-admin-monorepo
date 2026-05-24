@@ -4,8 +4,8 @@ import {requestClient} from '#/api/request';
  * 后台排班查询参数
  */
 export interface AdminScheduleQueryDTO {
-    venueId: number;
-    coachId?: number;
+    venueId: string;
+    coachId?: string;
     startDate?: string;
     endDate?: string;
     includeSlots?: boolean;
@@ -15,7 +15,7 @@ export interface AdminScheduleQueryDTO {
  * 后台排班总览
  */
 export interface AdminScheduleOverviewVO {
-    venueId: number;
+    venueId: string;
     startDate: string;
     endDate: string;
     coaches: CoachScheduleRowVO[];
@@ -25,7 +25,7 @@ export interface AdminScheduleOverviewVO {
  * 教练排班行
  */
 export interface CoachScheduleRowVO {
-    coachId?: number;
+    coachId?: string;
     coachName?: string;
     coachAvatar?: string;
     days: CoachDayScheduleVO[];

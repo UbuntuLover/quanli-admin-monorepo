@@ -1,14 +1,16 @@
 import { requestClient } from '#/api/request';
 
 /** =========================
- * 通用分页（兼容你项目里 PageResult 字段名差异）
+ * 通用分页（兼容后端 PageResult 字段差异）
  * ========================= */
 export interface PageResult<T> {
     list?: T[];
     items?: T[];
+    records?: T[];
     total: number;
     page?: number;
     pageNum?: number;
+    current?: number;
     pageSize?: number;
     size?: number;
 }
@@ -22,15 +24,15 @@ export interface NormalizedPageResult<T> {
 
 export function normalizePageResult<T>(res: PageResult<T>): NormalizedPageResult<T> {
     return {
-        list: res.list ?? res.items ?? [],
+        list: res.list ?? res.items ?? res.records ?? [],
         total: Number(res.total ?? 0),
-        page: Number(res.page ?? res.pageNum ?? 1),
+        page: Number(res.page ?? res.pageNum ?? res.current ?? 1),
         pageSize: Number(res.pageSize ?? res.size ?? 20),
     };
 }
 
 /** =========================
- * 管理后台 - 会员管理 DTO（对齐后端 admin 包）
+ * 管理后台 - 会员管理 DTO
  * ========================= */
 
 export interface AdminMemberQueryDTO {
@@ -38,7 +40,7 @@ export interface AdminMemberQueryDTO {
     phone?: string;
     name?: string;
     status?: number; // 1-正常 2-冻结 3-注销
-    registerTimeStart?: string; // LocalDateTime -> ISO字符串
+    registerTimeStart?: string; // LocalDateTime 字符串
     registerTimeEnd?: string;
     page?: number;
     pageSize?: number;
@@ -52,11 +54,11 @@ export interface AdminMemberListDTO {
     nickname?: string | null;
     avatar?: string | null;
     gender?: number | null; // 0-未知 1-男 2-女
-    status: number; // 1/2/3
-    totalConsumption: number; // Long
+    status: number;
+    totalConsumption: number;
     totalCourseCount: number;
     totalVenueVisitCount: number;
-    registerTime: string; // LocalDateTime
+    registerTime: string;
     lastVisitTime?: string | null;
 }
 
@@ -112,6 +114,32 @@ export interface MemberAdminStatisticsDTO {
 }
 
 /** =========================
+ * 综合搜索 DTO（对齐 MemberSearchRequest/ResultDTO）
+ * ========================= */
+
+export interface MemberSearchRequest {
+    phone?: string;
+    name?: string;
+    nickname?: string;
+    page?: number; // 默认 1
+    pageSize?: number; // 默认 10
+}
+
+export interface MemberSearchResultDTO {
+    id: number;
+    memberNo: string;
+    phone: string; // 已脱敏
+    name?: string | null;
+    nickname?: string | null;
+    avatar?: string | null;
+    gender?: number | null;
+    status: number;
+    registerTime: string;
+    totalConsumption: number;
+    matchType: 'PHONE' | 'NAME' | 'NICKNAME' | string;
+}
+
+/** =========================
  * C端 - 会员统计 DTO（/api/member/stats）
  * ========================= */
 
@@ -158,16 +186,27 @@ export function updateAdminMemberStatusApi(id: number, data: AdminMemberStatusUp
     return requestClient.put<boolean>(`${ADMIN_MEMBER_BASE}/${id}/status`, data);
 }
 
-/** 根据手机号搜索会员 */
-export function searchAdminMemberByPhoneApi(phone: string) {
-    return requestClient.get<AdminMemberListDTO | null>(`${ADMIN_MEMBER_BASE}/search`, {
-        params: { phone },
-    });
-}
-
 /** 获取会员统计（管理员视角） */
 export function getAdminMemberStatisticsApi() {
     return requestClient.get<MemberAdminStatisticsDTO>(`${ADMIN_MEMBER_BASE}/statistics`);
+}
+
+/**
+ * 综合搜索会员（支持 phone / name / nickname）
+ * 对齐后端：GET /api/admin/members/search
+ */
+export function searchAdminMembersApi(params: MemberSearchRequest) {
+    return requestClient.get<PageResult<MemberSearchResultDTO>>(`${ADMIN_MEMBER_BASE}/search`, {
+        params,
+    });
+}
+
+/**
+ * 兼容旧调用名：按手机号搜索（本质走综合搜索）
+ * 返回分页结果，调用方可取第一条
+ */
+export function searchAdminMemberByPhoneApi(phone: string, page = 1, pageSize = 10) {
+    return searchAdminMembersApi({ phone, page, pageSize });
 }
 
 /** =========================
@@ -175,10 +214,7 @@ export function getAdminMemberStatisticsApi() {
  * Base: /api/member
  * ========================= */
 
-/**
- * 获取当前会员统计（依赖 Authorization: Bearer xxx）
- * 如果你的 requestClient 已统一注入 token，这个函数可直接使用
- */
+/** 获取当前会员统计（依赖 Authorization: Bearer xxx） */
 export function getMemberStatsApi() {
     return requestClient.get<MemberStatsDTO>('/api/member/stats');
 }
