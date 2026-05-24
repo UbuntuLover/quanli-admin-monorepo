@@ -11,6 +11,26 @@ const routes: RouteRecordRaw[] = [
         },
         children: [
             {
+                name: 'MemberList',
+                path: '/member/list',
+                component: () => import('#/views/member/list/index.vue'),
+                meta: {
+                    icon: 'lucide:flame',
+                    keepAlive: true,
+                    title: '会员列表',
+                },
+            },
+            {
+                name: 'MemberDetail',
+                path: '/member/detail',
+                component: () => import('#/views/member/detail/index.vue'),
+                meta: {
+                    icon: 'lucide:book-user',
+                    keepAlive: true,
+                    title: '会员详情',
+                },
+            },
+            {
                 name: 'MemberRights',
                 path: '/member/rights',
                 component: () => import('#/views/member/rights/index.vue'),
