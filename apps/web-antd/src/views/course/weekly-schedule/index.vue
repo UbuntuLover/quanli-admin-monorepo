@@ -235,9 +235,9 @@
                             :key="slot.slot"
                             class="slot-item"
                             :class="[
-                                getSlotClass(slot.status),
-                                slot.status === ScheduleConstants.SLOT_STATUS_AVAILABLE ? 'slot-clickable' : ''
-                            ]"
+                getSlotClass(slot.status),
+                slot.status === ScheduleConstants.SLOT_STATUS_AVAILABLE ? 'slot-clickable' : ''
+              ]"
                             @click="openBookingModal(slot)"
                         >
                             <div class="slot-time">
@@ -289,11 +289,10 @@
             destroy-on-close
         >
             <div class="booking-modal-content">
-                <!-- 步骤条 -->
                 <a-steps :current="bookingStep" class="mb-6">
-                    <a-step title="选择会员" />
-                    <a-step title="选择课程" />
-                    <a-step title="确认预约" />
+                    <a-step title="选择会员"/>
+                    <a-step title="选择课程"/>
+                    <a-step title="确认预约"/>
                 </a-steps>
 
                 <!-- 步骤1：选择会员 -->
@@ -311,30 +310,30 @@
                                 @search="handleMemberSearch"
                                 @focus="handleSearchFocus"
                             >
-                                <template #options>
-                                    <a-select-option
-                                        v-for="member in memberOptions"
-                                        :key="member.id"
-                                        :value="member.id"
-                                    >
-                                        <div class="member-option">
-                                            <span class="member-name">
-                                                {{ member.name || member.nickname || '未命名' }}
-                                            </span>
-                                            <span class="member-phone">{{ member.phone }}</span>
-                                            <a-tag :color="getMatchTypeColor(member.matchType)" class="match-type-tag">
-                                                {{ getMatchTypeText(member.matchType) }}
-                                            </a-tag>
-                                        </div>
-                                    </a-select-option>
-                                </template>
+                                <!-- ✅ 修复点：去掉 #options，直接渲染 a-select-option -->
+                                <a-select-option
+                                    v-for="member in memberOptions"
+                                    :key="member.id"
+                                    :value="member.id"
+                                >
+                                    <div class="member-option">
+                    <span class="member-name">
+                      {{ member.name || member.nickname || '未命名' }}
+                    </span>
+                                        <span class="member-phone">{{ member.phone }}</span>
+                                        <a-tag :color="getMatchTypeColor(member.matchType)" class="match-type-tag">
+                                            {{ getMatchTypeText(member.matchType) }}
+                                        </a-tag>
+                                    </div>
+                                </a-select-option>
                                 <template #emptyIcon>
-                                    <SearchOutlined />
+                                    <SearchOutlined/>
                                 </template>
                             </a-select>
                         </a-form-item>
                         <div v-if="!memberSearched && memberOptions.length === 0" class="search-hint">
-                            <InfoCircleOutlined /> 输入手机号、姓名或昵称后自动搜索
+                            <InfoCircleOutlined/>
+                            输入手机号、姓名或昵称后自动搜索
                         </div>
                     </a-form>
                     <div class="step-actions">
@@ -413,29 +412,6 @@
 
 <script setup lang="ts">
 import type {TableColumnsType} from 'ant-design-vue';
-
-import type {
-    AdminScheduleOverviewVO, AdminScheduleSlotVO,
-    CoachDayScheduleVO,
-    CoachScheduleRowVO,
-} from '#/api/admin/schedule';
-
-import {
-    getAdminScheduleDayDetailApi,
-    getAdminScheduleOverviewApi,
-    ScheduleConstants,
-} from '#/api/admin/schedule';
-
-import { getVenueOptionsApi } from '#/api/venue/create';
-import {
-    searchAdminMembersApi,
-    normalizePageResult,
-    type MemberSearchRequest,
-    type MemberSearchResultDTO,
-} from '#/api/member/member';
-
-import { InfoCircleOutlined, SearchOutlined } from '@ant-design/icons-vue';
-
 import {
     Avatar as AAvatar,
     Button as AButton,
@@ -447,16 +423,33 @@ import {
     Empty as AEmpty,
     Form as AForm,
     List as AList,
+    message,
     Modal as AModal,
     Select as ASelect,
     Space as ASpace,
     Spin as ASpin,
-    Steps as ASteps,
     Step as AStep,
+    Steps as ASteps,
     Table as ATable,
     Tag as ATag,
-    message,
 } from 'ant-design-vue';
+import type {
+    AdminScheduleOverviewVO,
+    AdminScheduleSlotVO,
+    CoachDayScheduleVO,
+    CoachScheduleRowVO,
+} from '#/api/admin/schedule';
+import {getAdminScheduleDayDetailApi, getAdminScheduleOverviewApi, ScheduleConstants,} from '#/api/admin/schedule';
+
+import {getVenueOptionsApi} from '#/api/venue/create';
+import {
+    type MemberSearchRequest,
+    type MemberSearchResultDTO,
+    normalizePageResult,
+    searchAdminMembersApi,
+} from '#/api/member/member';
+
+import {InfoCircleOutlined, SearchOutlined} from '@ant-design/icons-vue';
 
 import dayjs from 'dayjs';
 import {computed, defineComponent, h, onMounted, reactive, ref} from 'vue';
@@ -476,7 +469,8 @@ const loading = ref(false);
 const detailLoading = ref(false);
 const detailDrawerOpen = ref(false);
 
-const venueOptions = ref<Array<{id: number; name: string}>>([]);
+/** ✅ 修复点：ID 改为 string，和 member.ts 一致 */
+const venueOptions = ref<Array<{ id: string; name: string }>>([]);
 
 const overview = ref<AdminScheduleOverviewVO | null>(null);
 
@@ -491,13 +485,13 @@ const submitLoading = ref(false);
 const memberSearchLoading = ref(false);
 const memberSearched = ref(false);
 const memberOptions = ref<MemberSearchResultDTO[]>([]);
-const packageOptions = ref<Array<{id: number; name: string; remainingCount: number}>>([]);
+const packageOptions = ref<Array<{ id: number; name: string; remainingCount: number }>>([]);
 
 let searchTimer: number | null = null;
 
 const bookingForm = reactive({
     memberId: undefined as string | undefined,
-    packageId: undefined as string | undefined,
+    packageId: undefined as number | undefined,
 });
 
 const queryForm = reactive({
@@ -555,11 +549,6 @@ const tableScrollX = computed(() => {
     return 190 + dateList.value.length * 160;
 });
 
-/**
- * 单元格组件。
- *
- * 使用内部组件可以避免模板里重复写太多判断逻辑。
- */
 const ScheduleDayCell = defineComponent({
     name: 'ScheduleDayCell',
     props: {
@@ -606,16 +595,11 @@ const ScheduleDayCell = defineComponent({
                 );
             }
 
-            const isLeave =
-                day.isLeave === ScheduleConstants.SCHEDULE_STATUS_LEAVE;
+            const isLeave = day.isLeave === ScheduleConstants.SCHEDULE_STATUS_LEAVE;
 
             const cls = [
                 'day-cell',
-                isLeave
-                    ? 'day-leave'
-                    : day.bookedSlots > 0
-                        ? 'day-booked'
-                        : 'day-normal',
+                isLeave ? 'day-leave' : day.bookedSlots > 0 ? 'day-booked' : 'day-normal',
             ];
 
             return h(
@@ -631,30 +615,12 @@ const ScheduleDayCell = defineComponent({
                             : h('span', {class: 'normal-label'}, '正常'),
                         h('span', {class: 'work-time'}, formatWorkTime(day)),
                     ]),
-
                     h('div', {class: 'day-stats'}, [
-                        h(
-                            'span',
-                            {class: 'stat stat-available'},
-                            `可 ${day.availableSlots || 0}`,
-                        ),
-                        h(
-                            'span',
-                            {class: 'stat stat-booked'},
-                            `约 ${day.bookedSlots || 0}`,
-                        ),
-                        h(
-                            'span',
-                            {class: 'stat stat-blocked'},
-                            `锁 ${day.blockedSlots || 0}`,
-                        ),
+                        h('span', {class: 'stat stat-available'}, `可 ${day.availableSlots || 0}`),
+                        h('span', {class: 'stat stat-booked'}, `约 ${day.bookedSlots || 0}`),
+                        h('span', {class: 'stat stat-blocked'}, `锁 ${day.blockedSlots || 0}`),
                     ]),
-
-                    h(
-                        'div',
-                        {class: 'day-booking-count'},
-                        `${day.bookings?.length || 0} 个预约`,
-                    ),
+                    h('div', {class: 'day-booking-count'}, `${day.bookings?.length || 0} 个预约`),
                 ],
             );
         };
@@ -669,10 +635,7 @@ function getDayByColumn(
     record: CoachScheduleRowVO,
     dataIndex: unknown,
 ): CoachDayScheduleVO | undefined {
-    if (!isDayColumn(dataIndex)) {
-        return undefined;
-    }
-
+    if (!isDayColumn(dataIndex)) return undefined;
     const date = dataIndex.replace('day_', '');
     return record.days?.find((item) => item.date === date);
 }
@@ -687,7 +650,6 @@ function getWeekText(day: number) {
         5: '周五',
         6: '周六',
     };
-
     return map[day] || '';
 }
 
@@ -696,36 +658,19 @@ function getCoachAvatarText(name?: string) {
 }
 
 function normalizeTime(value?: string) {
-    if (!value) {
-        return '';
-    }
-
+    if (!value) return '';
     return value.length >= 5 ? value.slice(0, 5) : value;
 }
 
 function formatWorkTime(day?: CoachDayScheduleVO | null) {
-    if (!day?.workStartTime || !day?.workEndTime) {
-        return '-';
-    }
-
-    return `${normalizeTime(day.workStartTime)}-${normalizeTime(
-        day.workEndTime,
-    )}`;
+    if (!day?.workStartTime || !day?.workEndTime) return '-';
+    return `${normalizeTime(day.workStartTime)}-${normalizeTime(day.workEndTime)}`;
 }
 
 function getSlotTagColor(status?: string) {
-    if (status === ScheduleConstants.SLOT_STATUS_AVAILABLE) {
-        return 'green';
-    }
-
-    if (status === ScheduleConstants.SLOT_STATUS_BOOKED) {
-        return 'blue';
-    }
-
-    if (status === ScheduleConstants.SLOT_STATUS_BLOCKED) {
-        return 'orange';
-    }
-
+    if (status === ScheduleConstants.SLOT_STATUS_AVAILABLE) return 'green';
+    if (status === ScheduleConstants.SLOT_STATUS_BOOKED) return 'blue';
+    if (status === ScheduleConstants.SLOT_STATUS_BLOCKED) return 'orange';
     return 'default';
 }
 
@@ -735,7 +680,6 @@ function getSlotStatusText(status?: string) {
         [ScheduleConstants.SLOT_STATUS_BOOKED]: '已约',
         [ScheduleConstants.SLOT_STATUS_BLOCKED]: '锁定',
     };
-
     return status ? map[status] || status : '-';
 }
 
@@ -749,24 +693,11 @@ function getSlotClass(status?: string) {
 
 async function handleSearch() {
     loading.value = true;
-
     try {
-        const params: Record<string, unknown> = {
-            includeSlots: false,
-        };
-        
-        if (queryForm.venueId !== undefined) {
-            params.venueId = queryForm.venueId;
-        }
-        
-        if (dateRange.value?.[0]) {
-            params.startDate = dateRange.value[0];
-        }
-        
-        if (dateRange.value?.[1]) {
-            params.endDate = dateRange.value[1];
-        }
-
+        const params: Record<string, unknown> = {includeSlots: false};
+        if (queryForm.venueId !== undefined) params.venueId = queryForm.venueId;
+        if (dateRange.value?.[0]) params.startDate = dateRange.value[0];
+        if (dateRange.value?.[1]) params.endDate = dateRange.value[1];
         overview.value = await getAdminScheduleOverviewApi(params);
     } finally {
         loading.value = false;
@@ -787,14 +718,8 @@ async function loadVenueOptions() {
     }
 }
 
-async function handleOpenDayDetail(
-    coach: CoachScheduleRowVO,
-    day?: CoachDayScheduleVO,
-) {
-    if (!day) {
-        return;
-    }
-
+async function handleOpenDayDetail(coach: CoachScheduleRowVO, day?: CoachDayScheduleVO) {
+    if (!day) return;
     if (!coach.coachId) {
         message.warning('教练ID不能为空');
         return;
@@ -803,7 +728,6 @@ async function handleOpenDayDetail(
     selectedCoach.value = coach;
     selectedDay.value = day;
     detailDrawerOpen.value = true;
-
     detailLoading.value = true;
 
     try {
@@ -816,14 +740,8 @@ async function handleOpenDayDetail(
 
         const detailCoach = result.coaches?.[0];
         const detailDay = detailCoach?.days?.[0];
-
-        if (detailCoach) {
-            selectedCoach.value = detailCoach;
-        }
-
-        if (detailDay) {
-            selectedDay.value = detailDay;
-        }
+        if (detailCoach) selectedCoach.value = detailCoach;
+        if (detailDay) selectedDay.value = detailDay;
     } finally {
         detailLoading.value = false;
     }
@@ -847,11 +765,9 @@ async function handleMemberSearch(value: string) {
         memberSearched.value = false;
         return;
     }
-    
-    if (searchTimer) {
-        clearTimeout(searchTimer);
-    }
-    
+
+    if (searchTimer) clearTimeout(searchTimer);
+
     searchTimer = window.setTimeout(async () => {
         memberSearchLoading.value = true;
         try {
@@ -862,19 +778,18 @@ async function handleMemberSearch(value: string) {
                 page: 1,
                 pageSize: 20,
             };
+
             const res = await searchAdminMembersApi(params);
-            console.log('原始接口返回:', res);
-            // 处理可能的包装响应
             const data = (res as any).data || res;
             const normalized = normalizePageResult(data);
-            console.log('归一化后:', normalized);
+
             memberOptions.value = normalized.list || [];
-            console.log('memberOptions:', memberOptions.value);
             memberSearched.value = true;
+
             if (memberOptions.value.length === 0) {
                 message.info('未找到匹配的会员');
             }
-        } catch (e) {
+        } catch {
             message.error('搜索会员失败');
         } finally {
             memberSearchLoading.value = false;
@@ -883,10 +798,7 @@ async function handleMemberSearch(value: string) {
 }
 
 function handleSearchFocus() {
-    // 如果已经有搜索结果，保持显示
-    if (memberOptions.value.length > 0) {
-        return;
-    }
+    if (memberOptions.value.length > 0) return;
     memberSearched.value = false;
 }
 
@@ -925,15 +837,12 @@ function nextStep() {
 }
 
 function prevStep() {
-    if (bookingStep.value > 0) {
-        bookingStep.value--;
-    }
+    if (bookingStep.value > 0) bookingStep.value--;
 }
 
 function openBookingModal(slot: AdminScheduleSlotVO) {
-    if (slot.status !== ScheduleConstants.SLOT_STATUS_AVAILABLE) {
-        return;
-    }
+    if (slot.status !== ScheduleConstants.SLOT_STATUS_AVAILABLE) return;
+
     selectedSlot.value = slot;
     bookingForm.memberId = undefined;
     bookingForm.packageId = undefined;
@@ -957,8 +866,6 @@ async function submitBooking() {
 
     submitLoading.value = true;
     try {
-        // TODO: 调用实际的预约创建API
-        // 这里暂时使用模拟数据
         console.log('预约信息:', {
             memberId: bookingForm.memberId,
             packageId: bookingForm.packageId,
@@ -970,11 +877,11 @@ async function submitBooking() {
         });
         message.success('预约创建成功');
         bookingModalOpen.value = false;
-        // 刷新排班详情
+
         if (selectedCoach.value && selectedDay.value) {
             await handleOpenDayDetail(selectedCoach.value, selectedDay.value);
         }
-    } catch (e) {
+    } catch {
         message.error('预约创建失败');
     } finally {
         submitLoading.value = false;
@@ -1127,11 +1034,10 @@ onMounted(async () => {
     border: 1px solid transparent;
     border-radius: 8px;
     cursor: pointer;
-    transition:
-        transform 0.18s ease,
-        box-shadow 0.18s ease,
-        border-color 0.18s ease,
-        background-color 0.18s ease;
+    transition: transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .day-cell:hover {

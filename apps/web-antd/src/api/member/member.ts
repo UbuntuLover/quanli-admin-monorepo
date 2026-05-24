@@ -47,7 +47,7 @@ export interface AdminMemberQueryDTO {
 }
 
 export interface AdminMemberListDTO {
-    id: number;
+    id: string;
     memberNo: string;
     phone: string;
     name?: string | null;
@@ -63,7 +63,7 @@ export interface AdminMemberListDTO {
 }
 
 export interface AdminMemberDetailDTO {
-    id: number;
+    id: string;
     memberNo: string;
     phone: string;
     name?: string | null;
@@ -75,7 +75,7 @@ export interface AdminMemberDetailDTO {
     city?: string | null;
     country?: string | null;
     registerSource: string;
-    registerVenueId?: number | null;
+    registerVenueId?: string | null;
     registerTime: string;
     status: number;
     totalConsumption: number;
@@ -126,7 +126,7 @@ export interface MemberSearchRequest {
 }
 
 export interface MemberSearchResultDTO {
-    id: number;
+    id: string;
     memberNo: string;
     phone: string; // 已脱敏
     name?: string | null;
@@ -172,17 +172,17 @@ export function getAdminMemberListApi(params: AdminMemberQueryDTO) {
 }
 
 /** 获取会员详情 */
-export function getAdminMemberDetailApi(id: number) {
+export function getAdminMemberDetailApi(id: string) {
     return requestClient.get<AdminMemberDetailDTO>(`${ADMIN_MEMBER_BASE}/${id}`);
 }
 
 /** 编辑会员信息 */
-export function updateAdminMemberApi(id: number, data: AdminMemberUpdateDTO) {
+export function updateAdminMemberApi(id: string, data: AdminMemberUpdateDTO) {
     return requestClient.put<boolean>(`${ADMIN_MEMBER_BASE}/${id}`, data);
 }
 
 /** 更新会员状态 */
-export function updateAdminMemberStatusApi(id: number, data: AdminMemberStatusUpdateDTO) {
+export function updateAdminMemberStatusApi(id: string, data: AdminMemberStatusUpdateDTO) {
     return requestClient.put<boolean>(`${ADMIN_MEMBER_BASE}/${id}/status`, data);
 }
 
@@ -191,20 +191,14 @@ export function getAdminMemberStatisticsApi() {
     return requestClient.get<MemberAdminStatisticsDTO>(`${ADMIN_MEMBER_BASE}/statistics`);
 }
 
-/**
- * 综合搜索会员（支持 phone / name / nickname）
- * 对齐后端：GET /api/admin/members/search
- */
+/** 综合搜索会员（支持 phone / name / nickname） */
 export function searchAdminMembersApi(params: MemberSearchRequest) {
     return requestClient.get<PageResult<MemberSearchResultDTO>>(`${ADMIN_MEMBER_BASE}/search`, {
         params,
     });
 }
 
-/**
- * 兼容旧调用名：按手机号搜索（本质走综合搜索）
- * 返回分页结果，调用方可取第一条
- */
+/** 兼容旧调用名：按手机号搜索（本质走综合搜索） */
 export function searchAdminMemberByPhoneApi(phone: string, page = 1, pageSize = 10) {
     return searchAdminMembersApi({ phone, page, pageSize });
 }
