@@ -50,7 +50,7 @@
                         :md="8"
                         :lg="6"
                     >
-                        <a-card hoverable class="venue-card">
+                        <a-card hoverable class="venue-card cursor-pointer" @click="goDetail(item.id)">
                             <template #cover>
                                 <img
                                     class="venue-cover"
@@ -59,44 +59,47 @@
                                 />
                             </template>
 
-                            <a-card-meta :title="item.name">
-                                <template #description>
-                                    <div class="meta-wrap">
-                                        <div class="mb-2">
-                                            <a-tag :color="statusColor(item.status)">
-                                                {{ item.status || '未知' }}
-                                            </a-tag>
-                                        </div>
+                            <template #title>
+                                <a @click="goDetail(item.id)" class="venue-name-link">
+                                    {{ item.name }}
+                                </a>
+                            </template>
+                            <template #description>
+                                <div class="meta-wrap">
+                                    <div class="mb-2">
+                                        <a-tag :color="statusColor(item.status)">
+                                            {{ item.status || '未知' }}
+                                        </a-tag>
+                                    </div>
 
-                                        <div class="line">
-                                            <span class="label">地址：</span>
-                                            <span class="value">{{ item.address || '-' }}</span>
-                                        </div>
-                                        <div class="line">
-                                            <span class="label">电话：</span>
-                                            <span class="value">{{ item.phone || '-' }}</span>
-                                        </div>
-                                        <div class="line">
-                                            <span class="label">营业：</span>
-                                            <span class="value">
+                                    <div class="line">
+                                        <span class="label">地址：</span>
+                                        <span class="value">{{ item.address || '-' }}</span>
+                                    </div>
+                                    <div class="line">
+                                        <span class="label">电话：</span>
+                                        <span class="value">{{ item.phone || '-' }}</span>
+                                    </div>
+                                    <div class="line">
+                                        <span class="label">营业：</span>
+                                        <span class="value">
                         {{ formatBusinessHours(item.businessHours) }}
                       </span>
-                                        </div>
-                                        <div class="line">
-                                            <span class="label">教练：</span>
-                                            <span class="value">{{ item.coaches?.length || 0 }} 人</span>
-                                        </div>
-
-                                        <div class="mt-2">
-                                            <a-space wrap>
-                                                <a-tag v-for="tag in (item.tags || []).slice(0, 3)" :key="tag">
-                                                    {{ tag }}
-                                                </a-tag>
-                                            </a-space>
-                                        </div>
                                     </div>
-                                </template>
-                            </a-card-meta>
+                                    <div class="line">
+                                        <span class="label">教练：</span>
+                                        <span class="value">{{ item.coaches?.length || 0 }} 人</span>
+                                    </div>
+
+                                    <div class="mt-2">
+                                        <a-space wrap>
+                                            <a-tag v-for="tag in (item.tags || []).slice(0, 3)" :key="tag">
+                                                {{ tag }}
+                                            </a-tag>
+                                        </a-space>
+                                    </div>
+                                </div>
+                            </template>
                         </a-card>
                     </a-col>
                 </a-row>
@@ -193,6 +196,13 @@ function goCreate() {
     router.push({ name: 'VenueCreate' });
 }
 
+function goDetail(id: number) {
+    router.push({
+        name: 'VenueDetail',
+        query: { id },
+    });
+}
+
 onMounted(fetchList);
 </script>
 
@@ -204,6 +214,13 @@ onMounted(fetchList);
     width: 100%;
     height: 160px;
     object-fit: cover;
+}
+.venue-name-link {
+    color: inherit;
+    cursor: pointer;
+}
+.venue-name-link:hover {
+    color: #1890ff;
 }
 .meta-wrap .line {
     display: flex;

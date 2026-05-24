@@ -208,6 +208,44 @@
                     />
                 </a-form-item>
 
+                <a-divider orientation="left">营业时间</a-divider>
+
+                <a-form-item label="每周营业时间">
+                    <div class="business-hours-wrap">
+                        <div v-for="day in weekDays" :key="day.value" class="day-row">
+                            <a-checkbox v-model:checked="form.businessHours![day.value].isOpen" class="day-checkbox">
+                                {{ day.label }}
+                            </a-checkbox>
+                            <template v-if="form.businessHours![day.value].isOpen">
+                                <a-time-picker
+                                    v-model:value="form.businessHours![day.value].startTime"
+                                    format="HH:mm"
+                                    placeholder="开始时间"
+                                    class="time-picker"
+                                />
+                                <span class="time-separator">至</span>
+                                <a-time-picker
+                                    v-model:value="form.businessHours![day.value].endTime"
+                                    format="HH:mm"
+                                    placeholder="结束时间"
+                                    class="time-picker"
+                                />
+                            </template>
+                            <span v-else class="rest-label">休息</span>
+                        </div>
+                    </div>
+                </a-form-item>
+
+                <a-form-item label="闭店日期">
+                    <a-select
+                        v-model:value="form.closedDates"
+                        mode="tags"
+                        placeholder="输入日期后回车（如：2025-02-01）"
+                        :token-separators="[',']"
+                    />
+                    <div class="mt-1 text-xs text-gray-400">设置临时闭店日期，格式：YYYY-MM-DD</div>
+                </a-form-item>
+
                 <div class="mt-4 flex justify-end gap-2">
                     <AButton @click="resetForm">重置</AButton>
                     <AButton type="primary" :loading="submitting" @click="handleSubmit">
@@ -223,9 +261,11 @@
 import {MediaUpload} from "#/components/upload";
 import { reactive, ref, watch } from 'vue';
 import type { Rule } from 'ant-design-vue/es/form';
+import dayjs from 'dayjs';
 import {
     Button as AButton,
     Card as ACard,
+    Checkbox as ACheckbox,
     Col as ACol,
     Divider as ADivider,
     Form as AForm,
@@ -236,6 +276,7 @@ import {
     Select as ASelect,
     Tag as ATag,
     Textarea as ATextarea,
+    TimePicker as ATimePicker,
     message,
 } from 'ant-design-vue';
 import { createVenueApi, type VenueCreateRequest } from '#/api/venue/create';
@@ -258,6 +299,24 @@ const statusOptions = [
     { label: '正常', value: 1 },
     { label: '停用', value: 2 },
 ];
+
+const weekDays = [
+    { label: '周一', value: 'monday' },
+    { label: '周二', value: 'tuesday' },
+    { label: '周三', value: 'wednesday' },
+    { label: '周四', value: 'thursday' },
+    { label: '周五', value: 'friday' },
+    { label: '周六', value: 'saturday' },
+    { label: '周日', value: 'sunday' },
+];
+
+function createDefaultBusinessHours(): Record<string, { isOpen: boolean; startTime: dayjs.Dayjs | null; endTime: dayjs.Dayjs | null }> {
+    const result = {};
+    weekDays.forEach((day) => {
+        result[day.value] = { isOpen: true, startTime: dayjs('09:00', 'HH:mm'), endTime: dayjs('21:00', 'HH:mm') };
+    });
+    return result;
+}
 
 /**
  * 上传组件绑定对象
@@ -284,7 +343,7 @@ const form = reactive<VenueCreateRequest>({
     photos: [],
     videos: [],
     description: '',
-    businessHours: null,
+    businessHours: createDefaultBusinessHours(),
     businessStatus: 1,
     closedDates: [],
     notice: '',
@@ -303,11 +362,12 @@ const rules: Record<string, Rule[]> = {
 
 /**
  * 上传结果同步回表单 URL 字段
+ * 注意：使用 previewUrl 而非 url，避免 OSS 裸链导致的访问问题
  */
 watch(
     logoFile,
     (val) => {
-        form.logo = val?.url || '';
+        form.logo = val?.previewUrl || val?.url || '';
     },
     { immediate: true },
 );
@@ -315,7 +375,7 @@ watch(
 watch(
     backgroundImageFile,
     (val) => {
-        form.backgroundImage = val?.url || '';
+        form.backgroundImage = val?.previewUrl || val?.url || '';
     },
     { immediate: true },
 );
@@ -323,7 +383,7 @@ watch(
 watch(
     photoFiles,
     (val) => {
-        form.photos = (val || []).map((item) => item.url).filter(Boolean);
+        form.photos = (val || []).map((item) => item.previewUrl || item.url).filter(Boolean);
     },
     { immediate: true, deep: true },
 );
@@ -331,12 +391,24 @@ watch(
 watch(
     videoFiles,
     (val) => {
-        form.videos = (val || []).map((item) => item.url).filter(Boolean);
+        form.videos = (val || []).map((item) => item.previewUrl || item.url).filter(Boolean);
     },
     { immediate: true, deep: true },
 );
 
 function normalizePayload(): VenueCreateRequest {
+    // 转换营业时间：dayjs对象转为 HH:mm 字符串
+    const normalizedBusinessHours: Record<string, { isOpen: boolean; startTime: string | null; endTime: string | null }> = {};
+    if (form.businessHours) {
+        Object.entries(form.businessHours).forEach(([day, config]) => {
+            normalizedBusinessHours[day] = {
+                isOpen: config.isOpen,
+                startTime: config.startTime ? config.startTime.format('HH:mm') : null,
+                endTime: config.endTime ? config.endTime.format('HH:mm') : null,
+            };
+        });
+    }
+
     return {
         ...form,
         name: form.name.trim(),
@@ -354,7 +426,7 @@ function normalizePayload(): VenueCreateRequest {
         photos: (form.photos || []).map((v) => v.trim()).filter(Boolean),
         videos: (form.videos || []).map((v) => v.trim()).filter(Boolean),
         closedDates: form.closedDates || [],
-        businessHours: form.businessHours || null,
+        businessHours: normalizedBusinessHours,
     };
 }
 
@@ -381,7 +453,7 @@ function resetForm() {
         photos: [],
         videos: [],
         description: '',
-        businessHours: null,
+        businessHours: createDefaultBusinessHours(),
         businessStatus: 1,
         closedDates: [],
         notice: '',
@@ -413,5 +485,28 @@ async function handleSubmit() {
 <style scoped>
 .venue-create-page {
     width: 100%;
+}
+.business-hours-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.day-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.day-checkbox {
+    width: 60px;
+}
+.time-picker {
+    width: 120px;
+}
+.time-separator {
+    color: #999;
+}
+.rest-label {
+    color: #ccc;
+    font-size: 12px;
 }
 </style>

@@ -25,9 +25,19 @@ const routes: RouteRecordRaw[] = [
                 path: '/venue/list',
                 component: () => import('#/views/venue/list/index.vue'),
                 meta: {
-                    icon: 'lucide:building-2',
+                    icon: 'lucide:hotel',
                     keepAlive: true,
                     title: '场馆列表',
+                },
+            },
+            {
+                name: 'VenueDetail',
+                path: '/venue/detail',
+                component: () => import('#/views/venue/detail/index.vue'),
+                meta: {
+                    hideInMenu: true,
+                    keepAlive: true,
+                    title: '场馆详情',
                 },
             }
 

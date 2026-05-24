@@ -829,9 +829,9 @@ async function loadTemplateDetail(id: number) {
         baseForm.originalPriceYuan = (detail.originalPrice || 0) / 100;
         baseForm.sellingPriceYuan = (detail.sellingPrice || 0) / 100;
         
-        // 根据卡类型设置Tab
+        // 根据卡类型设置表单类型
         if (detail.cardType === 'COURSE' || detail.cardType === 'VENUE') {
-            activeTab.value = 'SINGLE';
+            cardType.value = detail.cardType;
             singleForm.cardType = detail.cardType;
             singleForm.courseTimes = detail.courseTimes || undefined;
             singleForm.courseDuration = detail.courseDuration || undefined;
@@ -839,7 +839,7 @@ async function loadTemplateDetail(id: number) {
             singleForm.venueBenefitType = detail.venueBenefitType || undefined;
             singleForm.venueTimes = detail.venueTimes || undefined;
         } else if (detail.cardType === 'COMBO') {
-            activeTab.value = 'COMBO';
+            cardType.value = 'COMBO';
             // 加载子卡数据
             const childTemplates = (detail as any).childTemplates || (detail as any).children || [];
             comboChildren.value = childTemplates.map((child: any) => ({
