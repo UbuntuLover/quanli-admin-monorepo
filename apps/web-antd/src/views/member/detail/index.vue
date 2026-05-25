@@ -17,7 +17,7 @@ import {
     message,
 } from 'ant-design-vue';
 
-import {ArrowRightOutlined}  from "@ant-design/icons-vue";
+import {ArrowRightOutlined as AArrowRightOutlined}  from "@ant-design/icons-vue";
 
 import {
     getAdminMemberDetailApi,
@@ -102,7 +102,7 @@ function formatDuration(minutes: number | undefined | null): string {
     return `${mins} 分钟`;
 }
 
-async function loadMemberDetail(id: number) {
+async function loadMemberDetail(id: string) {
     loading.value = true;
     try {
         const data = await getAdminMemberDetailApi(id);
@@ -184,7 +184,7 @@ function handleBack() {
 onMounted(() => {
     const id = route.query.id;
     if (id) {
-        loadMemberDetail(Number(id));
+        loadMemberDetail(String(id));
     } else {
         message.error('会员ID不存在');
         router.push({ name: 'MemberList' });
