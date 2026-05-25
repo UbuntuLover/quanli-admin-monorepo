@@ -363,7 +363,17 @@
                                     :key="pkg.id"
                                     :value="pkg.id"
                                 >
-                                    {{ pkg.packageName }} (剩余{{ pkg.courseRemainingTimes || 0 }}次)
+                                    <div class="package-option">
+                                        <span class="package-name">
+                                            {{ pkg.parentName ? `${pkg.parentName} - ${pkg.packageName}` : pkg.packageName }}
+                                        </span>
+                                        <span class="package-tag" :class="{ 'sub-package': !!pkg.parentName }">
+                                            {{ pkg.parentName ? '组合卡子课' : '课程卡' }}
+                                        </span>
+                                        <span class="package-times">
+                                            剩余{{ pkg.courseRemainingTimes || 0 }}次
+                                        </span>
+                                    </div>
                                 </a-select-option>
                             </a-select>
                         </a-form-item>
@@ -454,6 +464,8 @@ import {
 
 import { getAdminPackagesByMemberIdApi, type AdminMemberPackageListDTO } from '#/api/member-packages/member-packages';
 
+import { createAdminBookingApi, type AdminCreateBookingDTO } from '#/api/booking/bookings';
+
 import {normalizePageResult} from "#/api/_shared/page";
 
 import {InfoCircleOutlined, SearchOutlined} from '@ant-design/icons-vue';
@@ -487,12 +499,24 @@ const selectedSlot = ref<AdminScheduleSlotVO | null>(null);
 
 // 预约创建弹窗
 const bookingModalOpen = ref(false);
+// 预约选项接口
+interface BookingPackageOption {
+    id: string;
+    packageId: string;
+    subPackageId?: string;
+    packageName: string;
+    parentName?: string;
+    courseRemainingTimes: number | null;
+    cardType: string;
+    packageRole: string;
+}
+
 const bookingStep = ref(0);
 const submitLoading = ref(false);
 const memberSearchLoading = ref(false);
 const memberSearched = ref(false);
 const memberOptions = ref<MemberSearchResultDTO[]>([]);
-const packageOptions = ref<AdminMemberPackageListDTO[]>([]);
+const packageOptions = ref<BookingPackageOption[]>([]);
 const packageLoading = ref(false);
 
 let searchTimer: number | null = null;
@@ -764,7 +788,8 @@ const selectedMemberName = computed(() => {
 
 const selectedPackageName = computed(() => {
     const pkg = packageOptions.value.find((p) => p.id === bookingForm.packageId);
-    return pkg?.packageName || '-';
+    if (!pkg) return '-';
+    return pkg.parentName ? `${pkg.parentName} - ${pkg.packageName}` : pkg.packageName;
 });
 
 async function handleMemberSearch(value: string) {
@@ -836,6 +861,55 @@ function getMatchTypeText(matchType: string) {
     }
 }
 
+/**
+ * 处理会员权益卡数据，转换为预约选项格式
+ * - 单独课程卡直接展示
+ * - 组合卡需要展开子卡展示课程信息
+ */
+function processPackagesToBookingOptions(packages: AdminMemberPackageListDTO[]): BookingPackageOption[] {
+    const options: BookingPackageOption[] = [];
+
+    for (const pkg of packages) {
+        // 只处理课程相关的权益
+        if (pkg.cardType !== 'COURSE' && pkg.cardType !== 'COMBO') continue;
+
+        // 跳过没有剩余次数的权益
+        if (!pkg.courseRemainingTimes || pkg.courseRemainingTimes <= 0) continue;
+
+        if (pkg.cardType === 'COMBO' && pkg.packageRole === 'ROOT' && pkg.subPackages?.length) {
+            // 组合卡：展开子卡
+            for (const subPkg of pkg.subPackages) {
+                // 子卡必须是课程类型且有剩余次数
+                if (subPkg.cardType !== 'COURSE') continue;
+                if (!subPkg.courseRemainingTimes || subPkg.courseRemainingTimes <= 0) continue;
+
+                options.push({
+                    id: `${pkg.id}_${subPkg.id}`,
+                    packageId: pkg.id,
+                    subPackageId: subPkg.id,
+                    packageName: subPkg.packageName,
+                    parentName: pkg.packageName,
+                    courseRemainingTimes: subPkg.courseRemainingTimes,
+                    cardType: subPkg.cardType,
+                    packageRole: subPkg.packageRole,
+                });
+            }
+        } else if (pkg.cardType === 'COURSE') {
+            // 单独课程卡
+            options.push({
+                id: pkg.id,
+                packageId: pkg.id,
+                packageName: pkg.packageName,
+                courseRemainingTimes: pkg.courseRemainingTimes,
+                cardType: pkg.cardType,
+                packageRole: pkg.packageRole,
+            });
+        }
+    }
+
+    return options;
+}
+
 async function nextStep() {
     if (bookingStep.value === 0 && bookingForm.memberId) {
         packageLoading.value = true;
@@ -843,19 +917,11 @@ async function nextStep() {
 
         try {
             const packages = await getAdminPackagesByMemberIdApi(bookingForm.memberId);
-
-            // 调试：确认后端到底回了什么
-            console.log('member packages raw:', packages);
-
-            // 先放宽，保证可见；后续再按业务收紧
-            packageOptions.value = (packages || []).filter((pkg) => {
-                const notDeleted = pkg.status !== 5;
-                const hasName = !!pkg.packageName;
-                return notDeleted && hasName;
-            });
+            // 处理权益卡数据：单独课程卡直接展示，组合卡展开子卡
+            packageOptions.value = processPackagesToBookingOptions(packages || []);
 
             if (packageOptions.value.length === 0) {
-                message.warning('该会员暂无可选权益卡');
+                message.warning('该会员暂无可用的课程权益');
             }
         } catch (e) {
             message.error('获取会员权益失败');
@@ -899,24 +965,47 @@ async function submitBooking() {
         return;
     }
 
+    // 解析选择的权益卡信息
+    const selectedPkg = packageOptions.value.find((p) => p.id === bookingForm.packageId);
+    if (!selectedPkg) {
+        message.warning('请选择有效的权益卡');
+        return;
+    }
+
+    // 获取会员信息
+    const selectedMember = memberOptions.value.find((m) => m.id === bookingForm.memberId);
+
+    // 计算课程时长（分钟）
+    const start = dayjs(selectedSlot.value.startTime, 'HH:mm');
+    const end = dayjs(selectedSlot.value.endTime, 'HH:mm');
+    const courseDuration = end.diff(start, 'minute');
+
     submitLoading.value = true;
     try {
-        console.log('预约信息:', {
+        // 构建预约请求参数
+        const bookingData: AdminCreateBookingDTO = {
             memberId: bookingForm.memberId,
-            packageId: bookingForm.packageId,
-            coachId: selectedCoach.value?.coachId,
-            venueId: queryForm.venueId,
-            date: selectedDay.value?.date,
+            memberName: selectedMember?.name || selectedMember?.nickname || undefined,
+            venueId: queryForm.venueId || undefined,
+            coachId: selectedCoach.value?.coachId || undefined,
+            bookingDate: selectedDay.value?.date || undefined,
             startTime: selectedSlot.value.startTime,
-            endTime: selectedSlot.value.endTime,
-        });
+            courseDuration: courseDuration,
+            packageId: selectedPkg.packageId,
+            packageName: selectedPkg.packageName,
+            status: 1, // 1-已预约/待确认
+        };
+
+        // 调用创建预约API
+        await createAdminBookingApi(bookingData);
+
         message.success('预约创建成功');
         bookingModalOpen.value = false;
 
         if (selectedCoach.value && selectedDay.value) {
             await handleOpenDayDetail(selectedCoach.value, selectedDay.value);
         }
-    } catch {
+    } catch (e) {
         message.error('预约创建失败');
     } finally {
         submitLoading.value = false;
@@ -1336,6 +1425,37 @@ onMounted(async () => {
     align-items: center;
     gap: 12px;
     width: 100%;
+}
+
+.package-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.package-name {
+    font-weight: 500;
+    flex: 1;
+}
+
+.package-tag {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #e6f4ff;
+    color: #1677ff;
+}
+
+.package-tag.sub-package {
+    background: #fff7e6;
+    color: #fa8c16;
+}
+
+.package-times {
+    color: var(--sv-text-secondary, #999);
+    font-size: 12px;
+    flex: 0 0 auto;
 }
 
 .member-name {
