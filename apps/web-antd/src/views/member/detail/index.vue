@@ -9,8 +9,6 @@ import {
     Col as ACol,
     Descriptions as ADescriptions,
     DescriptionsItem as ADescriptionsItem,
-    Divider as ADivider,
-    Image as AImage,
     PageHeader as APageHeader,
     Row as ARow,
     Space as ASpace,
@@ -18,10 +16,14 @@ import {
     Tag as ATag,
     message,
 } from 'ant-design-vue';
+
+import {ArrowRightOutlined}  from "@ant-design/icons-vue";
+
 import {
     getAdminMemberDetailApi,
     type AdminMemberDetailDTO,
 } from '#/api/member/member';
+import { getAdminPackagesByMemberIdApi, type AdminMemberPackageListDTO } from '#/api/member-packages/member-packages';
 
 defineOptions({ name: 'MemberDetail' });
 
@@ -29,6 +31,8 @@ const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const memberDetail = ref<AdminMemberDetailDTO | null>(null);
+const memberPackages = ref<AdminMemberPackageListDTO[]>([]);
+const packagesLoading = ref(false);
 
 function statusColor(status: number) {
     switch (status) {
@@ -103,10 +107,73 @@ async function loadMemberDetail(id: number) {
     try {
         const data = await getAdminMemberDetailApi(id);
         memberDetail.value = data;
+        // 同时加载会员权益
+        await loadMemberPackages(String(id));
     } catch (e: any) {
         message.error(e?.message || '加载会员详情失败');
     } finally {
         loading.value = false;
+    }
+}
+
+async function loadMemberPackages(memberId: string) {
+    packagesLoading.value = true;
+    try {
+        const data = await getAdminPackagesByMemberIdApi(memberId);
+        memberPackages.value = data || [];
+    } catch (e) {
+        console.error('加载会员权益失败:', e);
+    } finally {
+        packagesLoading.value = false;
+    }
+}
+
+function cardTypeText(cardType: string): string {
+    switch (cardType) {
+        case 'COURSE':
+            return '课程卡';
+        case 'VENUE':
+            return '场地卡';
+        case 'COMBO':
+            return '组合卡';
+        default:
+            return cardType;
+    }
+}
+
+function packageStatusText(status: number | undefined): string {
+    if (!status) return '-';
+    switch (status) {
+        case 1:
+            return '未激活';
+        case 2:
+            return '使用中';
+        case 3:
+            return '已过期';
+        case 4:
+            return '已冻结';
+        case 5:
+            return '已注销';
+        default:
+            return '未知';
+    }
+}
+
+function packageStatusColor(status: number | undefined): string {
+    if (!status) return 'default';
+    switch (status) {
+        case 1:
+            return 'default';
+        case 2:
+            return 'success';
+        case 3:
+            return 'warning';
+        case 4:
+            return 'error';
+        case 5:
+            return 'default';
+        default:
+            return 'default';
     }
 }
 
@@ -273,6 +340,70 @@ onMounted(() => {
                     </a-row>
                 </a-card>
 
+                <!-- 权益信息卡片 -->
+                <a-card :bordered="false" class="mb-4">
+                    <template #title>
+                        <span class="text-base font-semibold">权益信息</span>
+                    </template>
+                    <template #extra>
+                        <a-button
+                            type="link"
+                            @click="router.push({ name: 'MemberRights', query: { memberId: memberDetail.id } })"
+                        >
+                            查看详情 <a-arrow-right-outlined />
+                        </a-button>
+                    </template>
+
+                    <a-spin :spinning="packagesLoading">
+                        <div v-if="memberPackages.length > 0" class="packages-list">
+                            <a-row :gutter="16">
+                                <a-col
+                                    v-for="pkg in memberPackages.slice(0, 4)"
+                                    :key="pkg.id"
+                                    :xs="24"
+                                    :sm="12"
+                                    :md="6"
+                                >
+                                    <div class="package-card">
+                                        <div class="package-header">
+                                            <a-tag :color="packageStatusColor(pkg.status)">
+                                                {{ packageStatusText(pkg.status) }}
+                                            </a-tag>
+                                            <a-tag>{{ cardTypeText(pkg.cardType) }}</a-tag>
+                                        </div>
+                                        <div class="package-name">{{ pkg.packageName }}</div>
+                                        <div class="package-info">
+                                            <div v-if="pkg.courseRemainingTimes !== undefined" class="package-stat">
+                                                <span class="stat-label">剩余课程:</span>
+                                                <span class="stat-value">{{ pkg.courseRemainingTimes }}次</span>
+                                            </div>
+                                            <div v-if="pkg.venueRemainingTimes !== undefined" class="package-stat">
+                                                <span class="stat-label">剩余场地:</span>
+                                                <span class="stat-value">{{ pkg.venueRemainingTimes }}次</span>
+                                            </div>
+                                            <div v-if="pkg.endDate" class="package-stat">
+                                                <span class="stat-label">有效期至:</span>
+                                                <span class="stat-value">{{ formatDate(pkg.endDate) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a-col>
+                            </a-row>
+                            <div v-if="memberPackages.length > 4" class="mt-3 text-center">
+                                <a-button
+                                    type="link"
+                                    @click="router.push({ name: 'MemberRights', query: { memberId: memberDetail.id } })"
+                                >
+                                    查看全部 {{ memberPackages.length }} 张权益卡
+                                </a-button>
+                            </div>
+                        </div>
+                        <div v-else class="empty-state">
+                            <p>该会员暂无权益卡</p>
+                        </div>
+                    </a-spin>
+                </a-card>
+
                 <!-- 时间信息卡片 -->
                 <a-card :bordered="false" class="mb-4">
                     <template #title>
@@ -316,5 +447,50 @@ onMounted(() => {
 }
 .text-sm {
     font-size: 12px;
+}
+.packages-list {
+    margin-top: 8px;
+}
+.package-card {
+    padding: 16px;
+    background: var(--color-bg-container);
+    border-radius: 8px;
+    border: 1px solid var(--ant-color-border-secondary, rgba(120, 120, 120, 0.25));
+}
+.package-header {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.package-name {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--color-text);
+    margin-bottom: 12px;
+}
+.package-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.package-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+.package-stat .stat-label {
+    color: var(--color-text-secondary);
+    margin-bottom: 0;
+}
+.package-stat .stat-value {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text);
+}
+.empty-state {
+    padding: 40px;
+    text-align: center;
+    color: var(--color-text-secondary);
 }
 </style>

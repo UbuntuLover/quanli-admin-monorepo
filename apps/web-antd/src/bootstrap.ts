@@ -6,6 +6,7 @@ import { preferences } from '@vben/preferences';
 import { initStores } from '@vben/stores';
 import '@vben/styles';
 import '@vben/styles/antd';
+import Antd from 'ant-design-vue';
 
 import { useTitle } from '@vueuse/core';
 
@@ -33,6 +34,7 @@ async function bootstrap(namespace: string) {
   // });
 
   const app = createApp(App);
+  app.use(Antd);
 
   // 注册v-loading指令
   registerLoadingDirective(app, {
