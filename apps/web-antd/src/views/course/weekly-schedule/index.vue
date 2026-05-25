@@ -356,16 +356,20 @@
                                 v-model:value="bookingForm.packageId"
                                 placeholder="请选择课程或套餐"
                                 style="width: 100%"
+                                :loading="packageLoading"
                             >
                                 <a-select-option
                                     v-for="pkg in packageOptions"
                                     :key="pkg.id"
                                     :value="pkg.id"
                                 >
-                                    {{ pkg.name }} ({{ pkg.remainingCount || 0 }}次)
+                                    {{ pkg.packageName }} (剩余{{ pkg.courseRemainingTimes || 0 }}次)
                                 </a-select-option>
                             </a-select>
                         </a-form-item>
+                        <div v-if="!packageLoading && packageOptions.length === 0" class="empty-tip">
+                            该会员暂无可用的课程权益
+                        </div>
                     </a-form>
                     <div class="step-actions">
                         <a-button @click="prevStep">上一步</a-button>
@@ -445,9 +449,12 @@ import {getVenueOptionsApi} from '#/api/venue/create';
 import {
     type MemberSearchRequest,
     type MemberSearchResultDTO,
-    normalizePageResult,
     searchAdminMembersApi,
 } from '#/api/member/member';
+
+import { getAdminPackagesByMemberIdApi, type AdminMemberPackageListDTO } from '#/api/member-packages/member-packages';
+
+import {normalizePageResult} from "#/api/_shared/page";
 
 import {InfoCircleOutlined, SearchOutlined} from '@ant-design/icons-vue';
 
@@ -485,13 +492,14 @@ const submitLoading = ref(false);
 const memberSearchLoading = ref(false);
 const memberSearched = ref(false);
 const memberOptions = ref<MemberSearchResultDTO[]>([]);
-const packageOptions = ref<Array<{ id: number; name: string; remainingCount: number }>>([]);
+const packageOptions = ref<AdminMemberPackageListDTO[]>([]);
+const packageLoading = ref(false);
 
 let searchTimer: number | null = null;
 
 const bookingForm = reactive({
     memberId: undefined as string | undefined,
-    packageId: undefined as number | undefined,
+    packageId: undefined as string | undefined,
 });
 
 const queryForm = reactive({
@@ -756,7 +764,7 @@ const selectedMemberName = computed(() => {
 
 const selectedPackageName = computed(() => {
     const pkg = packageOptions.value.find((p) => p.id === bookingForm.packageId);
-    return pkg?.name || '-';
+    return pkg?.packageName || '-';
 });
 
 async function handleMemberSearch(value: string) {
@@ -828,13 +836,40 @@ function getMatchTypeText(matchType: string) {
     }
 }
 
-function nextStep() {
+async function nextStep() {
     if (bookingStep.value === 0 && bookingForm.memberId) {
+        packageLoading.value = true;
+        bookingForm.packageId = undefined;
+
+        try {
+            const packages = await getAdminPackagesByMemberIdApi(bookingForm.memberId);
+
+            // 调试：确认后端到底回了什么
+            console.log('member packages raw:', packages);
+
+            // 先放宽，保证可见；后续再按业务收紧
+            packageOptions.value = (packages || []).filter((pkg) => {
+                const notDeleted = pkg.status !== 5;
+                const hasName = !!pkg.packageName;
+                return notDeleted && hasName;
+            });
+
+            if (packageOptions.value.length === 0) {
+                message.warning('该会员暂无可选权益卡');
+            }
+        } catch (e) {
+            message.error('获取会员权益失败');
+            packageOptions.value = [];
+        } finally {
+            packageLoading.value = false;
+        }
+
         bookingStep.value = 1;
     } else if (bookingStep.value === 1 && bookingForm.packageId) {
         bookingStep.value = 2;
     }
 }
+
 
 function prevStep() {
     if (bookingStep.value > 0) bookingStep.value--;
@@ -847,9 +882,9 @@ function openBookingModal(slot: AdminScheduleSlotVO) {
     bookingForm.memberId = undefined;
     bookingForm.packageId = undefined;
     bookingStep.value = 0;
+    packageOptions.value = [];
     memberSearched.value = false;
     memberOptions.value = [];
-    packageOptions.value = [];
     bookingModalOpen.value = true;
 }
 

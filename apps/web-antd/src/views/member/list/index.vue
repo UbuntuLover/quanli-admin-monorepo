@@ -22,10 +22,10 @@ import {
 } from 'ant-design-vue';
 import {
     getAdminMemberListApi,
-    normalizePageResult,
     type AdminMemberListDTO,
     type AdminMemberQueryDTO,
 } from '#/api/member/member';
+import { normalizePageResult } from '#/api/_shared/page';
 
 defineOptions({ name: 'MemberList' });
 
@@ -197,7 +197,7 @@ onMounted(fetchList);
                         <a-range-picker
                             v-model:value="registerTimeRange"
                             style="width: 100%"
-                            placeholder="注册时间范围"
+                            :placeholder="['开始时间', '结束时间']"
                         />
                     </a-col>
                 </a-row>
