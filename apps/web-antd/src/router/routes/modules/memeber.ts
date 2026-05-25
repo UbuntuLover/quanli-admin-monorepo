@@ -25,6 +25,7 @@ const routes: RouteRecordRaw[] = [
                 path: '/member/detail',
                 component: () => import('#/views/member/detail/index.vue'),
                 meta: {
+                    hideInMenu: true,
                     icon: 'lucide:book-user',
                     keepAlive: true,
                     title: '会员详情',
@@ -35,6 +36,7 @@ const routes: RouteRecordRaw[] = [
                 path: '/member/rights',
                 component: () => import('#/views/member/rights/index.vue'),
                 meta: {
+                    hideInMenu: true,
                     icon: 'lucide:badge-check',
                     keepAlive: true,
                     title: '会员权益信息',

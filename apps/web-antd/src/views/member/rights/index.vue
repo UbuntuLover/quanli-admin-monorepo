@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, h } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 import {
@@ -9,8 +9,10 @@ import {
     DescriptionsItem as ADescriptionsItem,
     Drawer as ADrawer,
     Empty as AEmpty,
+    Menu as AMenu,
     Modal as AModal,
     PageHeader as APageHeader,
+    Popconfirm as APopconfirm,
     Row as ARow,
     Spin as ASpin,
     Tag as ATag,
@@ -20,11 +22,18 @@ import {
 import {
     ArrowLeftOutlined as AArrowLeftOutlined,
     CalendarOutlined as ACalendarOutlined,
+    MoreOutlined as AMoreOutlined,
+    AlignRightOutlined as ASnowflakeOutlined,
+    UnlockOutlined as AUnlockOutlined,
+    DeleteOutlined as ADeleteOutlined,
 } from '@ant-design/icons-vue';
 
 import {
     getAdminPackagesByMemberIdApi,
     getAdminMemberPackageDetailApi,
+    freezeAdminMemberPackageApi,
+    unfreezeAdminMemberPackageApi,
+    deleteAdminMemberPackageApi,
     type AdminMemberPackageListDTO,
     type AdminMemberPackageDetailDTO,
 } from '#/api/member-packages/member-packages';
@@ -43,6 +52,15 @@ const detailLoading = ref(false);
 const subPackageModalOpen = ref(false);
 const subPackageDetail = ref<AdminMemberPackageDetailDTO | null>(null);
 const subPackageLoading = ref(false);
+const actionMenuVisible = ref(false);
+const actionMenuTarget = ref<{ pkg: AdminMemberPackageListDTO; event: MouseEvent } | null>(null);
+const freezeModalVisible = ref(false);
+const freezeDays = ref(7);
+const freezeReason = ref('');
+const deleteModalVisible = ref(false);
+const deleteReason = ref('');
+const currentActionPkg = ref<AdminMemberPackageListDTO | null>(null);
+
 
 const memberId = computed(() => route.query.memberId as string | undefined);
 
@@ -169,6 +187,82 @@ function closeSubPackageModal() {
     subPackageDetail.value = null;
 }
 
+function openActionMenu(pkg: AdminMemberPackageListDTO, event: MouseEvent) {
+    event.stopPropagation();
+    actionMenuTarget.value = { pkg, event };
+    actionMenuVisible.value = true;
+}
+
+function closeActionMenu() {
+    actionMenuVisible.value = false;
+    actionMenuTarget.value = null;
+}
+
+async function handleFreeze(pkg: AdminMemberPackageListDTO) {
+    currentActionPkg.value = pkg;
+    closeActionMenu();
+    freezeDays.value = 7;
+    freezeReason.value = '';
+    freezeModalVisible.value = true;
+}
+
+async function confirmFreeze() {
+    const pkg = currentActionPkg.value;
+    if (!pkg) return;
+
+    try {
+        await freezeAdminMemberPackageApi(pkg.id, {
+            freezeDays: freezeDays.value,
+            freezeReason: freezeReason.value || undefined,
+        });
+        message.success('冻结成功');
+        freezeModalVisible.value = false;
+        currentActionPkg.value = null;
+        await loadData();
+    } catch (e: any) {
+        message.error(e?.message || '冻结失败');
+    }
+}
+
+async function confirmDelete() {
+    const pkg = currentActionPkg.value;
+    if (!pkg) return;
+
+    try {
+        await deleteAdminMemberPackageApi(pkg.id, {
+            deleteReason: deleteReason.value || undefined,
+        });
+        message.success('删除成功');
+        deleteModalVisible.value = false;
+        currentActionPkg.value = null;
+        await loadData();
+    } catch (e: any) {
+        message.error(e?.message || '删除失败');
+    }
+}
+
+async function handleUnfreeze(pkg: AdminMemberPackageListDTO) {
+    currentActionPkg.value = pkg;
+    closeActionMenu();
+    try {
+        await unfreezeAdminMemberPackageApi(pkg.id);
+        message.success('解冻成功');
+        currentActionPkg.value = null;
+        await loadData();
+    } catch (e: any) {
+        message.error(e?.message || '解冻失败');
+    }
+}
+
+
+async function handleDelete(pkg: AdminMemberPackageListDTO) {
+    currentActionPkg.value = pkg;
+    closeActionMenu();
+    deleteReason.value = '';
+    deleteModalVisible.value = true;
+}
+
+
 async function loadData() {
     if (!memberId.value) {
         message.error('会员ID不存在');
@@ -180,7 +274,7 @@ async function loadData() {
     try {
         // 并行加载会员详情和权益卡列表
         const [member, packages] = await Promise.all([
-            getAdminMemberDetailApi(Number(memberId.value)),
+            getAdminMemberDetailApi(memberId.value),
             getAdminPackagesByMemberIdApi(memberId.value),
         ]);
         memberDetail.value = member;
@@ -297,9 +391,17 @@ onMounted(() => {
                                     <div class="package-header">
                                         <div class="package-title-row">
                                             <span class="package-name">{{ pkg.packageName }}</span>
-                                            <a-tag :color="cardTypeColor(pkg.cardType)" class="ml-auto">
-                                                {{ cardTypeText(pkg.cardType) }}
-                                            </a-tag>
+                                            <div class="package-actions">
+                                                <a-tag :color="cardTypeColor(pkg.cardType)">
+                                                    {{ cardTypeText(pkg.cardType) }}
+                                                </a-tag>
+                                                <button
+                                                    class="action-btn"
+                                                    @click="openActionMenu(pkg, $event)"
+                                                >
+                                                    <a-more-outlined />
+                                                </button>
+                                            </div>
                                         </div>
                                         <div class="package-status-bar">
                                             <a-tag :color="packageStatusColor(pkg.status)">
@@ -633,6 +735,85 @@ onMounted(() => {
                         </div>
                     </a-spin>
                 </a-modal>
+
+                <!-- 操作菜单 -->
+                <a-menu
+                    v-if="actionMenuVisible && actionMenuTarget"
+                    :style="{
+                        position: 'fixed',
+                        top: `${actionMenuTarget.event.clientY}px`,
+                        left: `${actionMenuTarget.event.clientX}px`,
+                        zIndex: 1000,
+                    }"
+                    mode="vertical"
+                    :items="[
+                        {
+                            key: 'freeze',
+                            label: actionMenuTarget.pkg.status === 4 ? '解冻权益卡' : '冻结权益卡',
+                            icon: actionMenuTarget.pkg.status === 4 ? h(AUnlockOutlined) : h(ASnowflakeOutlined),
+                            onClick: () => actionMenuTarget.pkg.status === 4 ? handleUnfreeze(actionMenuTarget.pkg) : handleFreeze(actionMenuTarget.pkg),
+                            disabled: actionMenuTarget.pkg.status === 3 || actionMenuTarget.pkg.status === 5,
+                        },
+                        {
+                            key: 'delete',
+                            label: '删除权益卡',
+                            icon: h(ADeleteOutlined),
+                            onClick: () => handleDelete(actionMenuTarget.pkg),
+                            disabled: actionMenuTarget.pkg.status === 5,
+                            danger: true,
+                        },
+                    ]"
+                />
+
+                <!-- 冻结弹窗 -->
+                <a-modal
+                    v-model:open="freezeModalVisible"
+                    title="冻结权益卡"
+                    :width="400"
+                    @cancel="freezeModalVisible = false"
+                    @ok="confirmFreeze"
+                >
+                    <div class="freeze-form">
+                        <div class="form-item">
+                            <label>冻结天数</label>
+                            <a-input-number
+                                v-model:value="freezeDays"
+                                :min="1"
+                                :max="365"
+                                class="w-full"
+                            />
+                        </div>
+                        <div class="form-item">
+                            <label>冻结原因（选填）</label>
+                            <a-textarea
+                                v-model:value="freezeReason"
+                                :rows="3"
+                                placeholder="请输入冻结原因"
+                            />
+                        </div>
+                    </div>
+                </a-modal>
+
+                <!-- 删除弹窗 -->
+                <a-modal
+                    v-model:open="deleteModalVisible"
+                    title="删除权益卡"
+                    :width="400"
+                    @cancel="deleteModalVisible = false"
+                    @ok="confirmDelete"
+                >
+                    <div class="delete-form">
+                        <p class="delete-warning">删除后将无法恢复，确定要删除吗？</p>
+                        <div class="form-item">
+                            <label>删除原因（选填）</label>
+                            <a-textarea
+                                v-model:value="deleteReason"
+                                :rows="3"
+                                placeholder="请输入删除原因"
+                            />
+                        </div>
+                    </div>
+                </a-modal>
             </div>
         </a-spin>
     </div>
@@ -701,6 +882,30 @@ onMounted(() => {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 8px;
+}
+
+.package-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.action-btn {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: var(--ant-color-primary-bg);
+    color: var(--ant-color-primary);
 }
 
 .package-name {
@@ -853,5 +1058,27 @@ onMounted(() => {
 
 .text-red-500 {
     color: #ff4d4f;
+}
+
+.freeze-form,
+.delete-form {
+    padding: 16px 0;
+}
+
+.form-item {
+    margin-bottom: 16px;
+}
+
+.form-item label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.delete-warning {
+    color: #ff4d4f;
+    margin-bottom: 16px;
+    font-weight: 500;
 }
 </style>
