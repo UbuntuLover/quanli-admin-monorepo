@@ -9,6 +9,7 @@ import {
     DescriptionsItem as ADescriptionsItem,
     Drawer as ADrawer,
     Empty as AEmpty,
+    Modal as AModal,
     PageHeader as APageHeader,
     Row as ARow,
     Spin as ASpin,
@@ -39,6 +40,9 @@ const memberPackages = ref<AdminMemberPackageListDTO[]>([]);
 const detailDrawerOpen = ref(false);
 const packageDetail = ref<AdminMemberPackageDetailDTO | null>(null);
 const detailLoading = ref(false);
+const subPackageModalOpen = ref(false);
+const subPackageDetail = ref<AdminMemberPackageDetailDTO | null>(null);
+const subPackageLoading = ref(false);
 
 const memberId = computed(() => route.query.memberId as string | undefined);
 
@@ -144,6 +148,25 @@ async function openPackageDetail(pkgId: string) {
 function closeDetailDrawer() {
     detailDrawerOpen.value = false;
     packageDetail.value = null;
+}
+
+async function openSubPackageDetail(pkgId: string) {
+    subPackageModalOpen.value = true;
+    subPackageLoading.value = true;
+    try {
+        const detail = await getAdminMemberPackageDetailApi(pkgId);
+        subPackageDetail.value = detail;
+    } catch (e: any) {
+        message.error(e?.message || '加载子卡详情失败');
+        subPackageModalOpen.value = false;
+    } finally {
+        subPackageLoading.value = false;
+    }
+}
+
+function closeSubPackageModal() {
+    subPackageModalOpen.value = false;
+    subPackageDetail.value = null;
 }
 
 async function loadData() {
@@ -456,7 +479,8 @@ onMounted(() => {
                                     <div
                                         v-for="subPkg in packageDetail.subPackages"
                                         :key="subPkg.id"
-                                        class="sub-package-item"
+                                        class="sub-package-item cursor-pointer"
+                                        @click="openSubPackageDetail(subPkg.id)"
                                     >
                                         <div class="sub-package-header">
                                             <span class="sub-package-name">{{ subPkg.packageName }}</span>
@@ -472,6 +496,7 @@ onMounted(() => {
                                                 场地: 总{{ subPkg.venueTotalTimes }} / 剩余{{ subPkg.venueRemainingTimes || 0 }}
                                             </span>
                                         </div>
+                                        <div class="sub-package-hint">点击查看详情</div>
                                     </div>
                                 </div>
                             </a-card>
@@ -505,6 +530,109 @@ onMounted(() => {
                         </div>
                     </a-spin>
                 </a-drawer>
+
+                <!-- 子卡详情弹窗 -->
+                <a-modal
+                    v-model:open="subPackageModalOpen"
+                    title="子卡详情"
+                    :width="500"
+                    @cancel="closeSubPackageModal"
+                >
+                    <a-spin :spinning="subPackageLoading">
+                        <div v-if="subPackageDetail" class="sub-package-detail">
+                            <a-card :bordered="false" class="mb-4">
+                                <template #title>
+                                    <span class="text-base font-semibold">{{ subPackageDetail.packageName }}</span>
+                                </template>
+                                <div class="detail-header">
+                                    <a-tag :color="cardTypeColor(subPackageDetail.cardType)">
+                                        {{ cardTypeText(subPackageDetail.cardType) }}
+                                    </a-tag>
+                                    <a-tag :color="packageStatusColor(subPackageDetail.status)">
+                                        {{ packageStatusText(subPackageDetail.status) }}
+                                    </a-tag>
+                                    <span class="detail-no">编号: {{ subPackageDetail.packageNo }}</span>
+                                </div>
+                            </a-card>
+
+                            <a-card :bordered="false" class="mb-4">
+                                <template #title>
+                                    <span class="text-base font-semibold">有效期</span>
+                                </template>
+                                <a-descriptions :column="2" bordered size="small">
+                                    <a-descriptions-item label="开始日期">
+                                        {{ formatDate(subPackageDetail.startDate) }}
+                                    </a-descriptions-item>
+                                    <a-descriptions-item label="结束日期">
+                                        {{ formatDate(subPackageDetail.endDate) }}
+                                    </a-descriptions-item>
+                                    <a-descriptions-item v-if="subPackageDetail.remainingDays" label="剩余天数">
+                                        <span class="text-success font-medium">{{ subPackageDetail.remainingDays }} 天</span>
+                                    </a-descriptions-item>
+                                </a-descriptions>
+                            </a-card>
+
+                            <a-card :bordered="false" class="mb-4">
+                                <template #title>
+                                    <span class="text-base font-semibold">使用情况</span>
+                                </template>
+                                <a-descriptions :column="1" bordered size="small">
+                                    <a-descriptions-item v-if="subPackageDetail.courseTotalTimes" label="课程次数">
+                                        <div class="usage-bar">
+                                            <div class="usage-info">
+                                                <span>总计: {{ subPackageDetail.courseTotalTimes }}次</span>
+                                                <span>已用: {{ subPackageDetail.courseUsedTimes }}次</span>
+                                                <span class="text-success">剩余: {{ subPackageDetail.courseRemainingTimes }}次</span>
+                                            </div>
+                                            <div class="usage-progress">
+                                                <div
+                                                    class="progress-bar"
+                                                    :style="{ width: `${(subPackageDetail.courseUsedTimes / subPackageDetail.courseTotalTimes) * 100}%` }"
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    </a-descriptions-item>
+                                    <a-descriptions-item v-if="subPackageDetail.venueTotalTimes" label="场地次数">
+                                        <div class="usage-bar">
+                                            <div class="usage-info">
+                                                <span>总计: {{ subPackageDetail.venueTotalTimes }}次</span>
+                                                <span>已用: {{ subPackageDetail.venueUsedTimes || 0 }}次</span>
+                                                <span class="text-success">剩余: {{ subPackageDetail.venueRemainingTimes }}次</span>
+                                            </div>
+                                            <div class="usage-progress">
+                                                <div
+                                                    class="progress-bar"
+                                                    :style="{ width: `${((subPackageDetail.venueUsedTimes || 0) / subPackageDetail.venueTotalTimes) * 100}%` }"
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    </a-descriptions-item>
+                                </a-descriptions>
+                            </a-card>
+
+                            <a-card v-if="subPackageDetail.status === 4" :bordered="false" class="mb-4">
+                                <template #title>
+                                    <span class="text-base font-semibold">冻结信息</span>
+                                </template>
+                                <a-descriptions :column="1" bordered size="small">
+                                    <a-descriptions-item label="冻结天数">
+                                        {{ subPackageDetail.freezeDays }} 天
+                                    </a-descriptions-item>
+                                    <a-descriptions-item label="冻结原因">
+                                        {{ subPackageDetail.freezeReason || '-' }}
+                                    </a-descriptions-item>
+                                </a-descriptions>
+                            </a-card>
+
+                            <a-card v-if="subPackageDetail.remark" :bordered="false">
+                                <template #title>
+                                    <span class="text-base font-semibold">备注</span>
+                                </template>
+                                <p class="remark-text">{{ subPackageDetail.remark }}</p>
+                            </a-card>
+                        </div>
+                    </a-spin>
+                </a-modal>
             </div>
         </a-spin>
     </div>
@@ -673,6 +801,17 @@ onMounted(() => {
     background: var(--color-bg-container);
     border: 1px solid var(--ant-color-border-secondary);
     border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.sub-package-item.cursor-pointer {
+    cursor: pointer;
+}
+
+.sub-package-item.cursor-pointer:hover {
+    background: var(--ant-color-primary-bg);
+    border-color: var(--ant-color-primary);
+    transform: translateX(4px);
 }
 
 .sub-package-header {
@@ -693,6 +832,13 @@ onMounted(() => {
     gap: 4px;
     font-size: 12px;
     color: var(--color-text-secondary);
+}
+
+.sub-package-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--ant-color-primary);
+    text-align: right;
 }
 
 .remark-text {
