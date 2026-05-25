@@ -1,6 +1,6 @@
 export interface ProductQueryDTO {
-    categoryId?: number;
-    brandId?: number;
+    categoryId?: string;
+    brandId?: string;
     name?: string;
     minPrice?: number;
     maxPrice?: number;
@@ -16,7 +16,7 @@ export interface ProductQueryDTO {
 }
 
 export interface ProductListDTO {
-    id: number;
+    id: string;
     productNo: string;
     name: string;
     subtitle?: string;
@@ -32,8 +32,8 @@ export interface ProductListDTO {
 }
 
 export interface ProductSkuDTO {
-    id: number;
-    productId: number;
+    id: string;
+    productId: string;
     skuNo: string;
     skuName: string;
     sales: number;
@@ -47,12 +47,12 @@ export interface ProductSkuDTO {
 }
 
 export interface ProductDTO {
-    id: number;
+    id: string;
     productNo: string;
     name: string;
-    categoryId: number;
+    categoryId: string;
     categoryName?: string;
-    brandId?: number;
+    brandId?: string;
     brandName?: string;
     subtitle?: string;
     description?: string;
@@ -89,8 +89,8 @@ export interface CreateProductSkuRequest {
 
 export interface CreateProductRequest {
     name: string;
-    categoryId: number;
-    brandId?: number;
+    categoryId: string;
+    brandId?: string;
     subtitle?: string;
     description?: string;
     isNew?: number;
@@ -106,8 +106,8 @@ export interface CreateProductRequest {
 
 export interface UpdateProductRequest {
     name?: string;
-    categoryId?: number;
-    brandId?: number;
+    categoryId?: string;
+    brandId?: string;
     subtitle?: string;
     description?: string;
     status?: string;
@@ -158,7 +158,7 @@ export interface GroupBuyInfoDTO {
 }
 
 export interface ProductDetailDTO {
-    id: number;
+    id: string;
     productNo?: string;
     name: string;
     subtitle?: string;

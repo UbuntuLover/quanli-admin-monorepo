@@ -28,10 +28,8 @@ export function getProductDetailApi(id: string) {
 
 /**
  * 获取商品详情，前台/商城展示使用。
- *
- * 如果你的 ProductController 里实际路径不是这个，需要按后端实际接口调整。
  */
-export function getProductFrontendDetailApi(id: number) {
+export function getProductFrontendDetailApi(id: string) {
     return requestClient.get<ProductDetailDTO>(`/api/products/${id}/frontend`);
 }
 
@@ -52,7 +50,7 @@ export function updateProductApi(id: string, data: UpdateProductRequest) {
 /**
  * 删除商品。
  */
-export function deleteProductApi(id: number) {
+export function deleteProductApi(id: string) {
     return requestClient.delete<boolean>(`/api/products/${id}`);
 }
 
@@ -62,7 +60,7 @@ export function deleteProductApi(id: number) {
  * 后端接口：
  * PUT /api/products/{id}/status?status=ACTIVE
  */
-export function updateProductStatusApi(id: number, status: string) {
+export function updateProductStatusApi(id: string, status: string) {
     return requestClient.put<boolean>(`/api/products/${id}/status`, undefined, {
         params: {
             status,
@@ -107,11 +105,9 @@ export function searchProductsApi(keyword: string, page = 1, pageSize = 10) {
 
 /**
  * 按分类查询商品。
- *
- * 如果你的后端 ProductController 路径不同，请同步修改。
  */
 export function getProductsByCategoryApi(
-    categoryId: number,
+    categoryId: string,
     page = 1,
     pageSize = 10,
 ) {

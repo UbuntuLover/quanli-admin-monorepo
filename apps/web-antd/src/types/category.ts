@@ -32,7 +32,7 @@ export interface UpdateCategoryRequest {
 }
 
 export interface CategoryDeletePreviewDTO {
-    categoryId: number;
+    categoryId: string;
     categoryName: string;
     categoryLevel: number;
     hasChildren: boolean;
@@ -46,6 +46,6 @@ export interface CategoryDeletePreviewDTO {
 }
 
 export interface MoveCategoryProductsRequest {
-    targetCategoryId: number;
+    targetCategoryId: string;
     includeChildren?: boolean;
 }
