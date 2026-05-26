@@ -13,10 +13,10 @@ const routes: RouteRecordRaw[] = [
             {
                 name: 'GroupBuyList',
                 path: '/group-buy/list',
-                component: () => import('#/views/groupbuy/detail/index.vue'),
+                component: () => import('#/views/groupbuy/list/index.vue'),
                 meta: {
-                    title: '团购详情',
-                    icon: 'lucide:image-plus',
+                    title: '团购活动列表',
+                    icon: 'lucide:list',
                     keepAlive: true,
                 },
             },
@@ -26,8 +26,18 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('#/views/groupbuy/create/index.vue'),
                 meta: {
                     title: '创建团购活动',
-                    icon: 'lucide:image-plus',
+                    icon: 'lucide:plus',
                     keepAlive: true,
+                },
+            },
+            {
+                name: 'GroupBuyDetail',
+                path: '/group-buy/detail',
+                component: () => import('#/views/groupbuy/detail/index.vue'),
+                meta: {
+                    title: '团购活动详情',
+                    icon: 'lucide:eye',
+                    hideInMenu: true,
                 },
             },
         ],
