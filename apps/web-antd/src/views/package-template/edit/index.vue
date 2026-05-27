@@ -491,7 +491,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import type { CascaderOption } from 'ant-design-vue';
 import {
     Button as AButton,
     Card as ACard,
@@ -522,7 +521,8 @@ import {
     type PackageProductApi,
 } from '#/api/template/template';
 import { getAllVenuesApi, type VenueDetailDTO } from '#/api/venue/list';
-import { type CategoryDTO, getCategoryTreeApi } from '#/api/products/productCategory';
+import {  getCategoryTreeApi } from '#/api/products/productCategory';
+import { type CategoryDTO } from '#/types/category';
 
 type CardType = 'COURSE' | 'VENUE' | 'COMBO';
 
@@ -763,7 +763,7 @@ function buildCascaderOptions(categories: CategoryDTO[], level: number = 1): Cas
     if (level > 3) {
         return [];
     }
-    
+
     return categories.map((cat) => {
         const option: CascaderOption = {
             value: cat.id,
@@ -822,13 +822,13 @@ async function loadTemplateDetail(id: number) {
     pageLoading.value = true;
     try {
         const detail = await getPackageTemplateDetailApi(id);
-        
+
         // 回显基础信息
         baseForm.templateName = detail.name;
         baseForm.validityDays = detail.validityDays;
         baseForm.originalPriceYuan = (detail.originalPrice || 0) / 100;
         baseForm.sellingPriceYuan = (detail.sellingPrice || 0) / 100;
-        
+
         // 根据卡类型设置表单类型
         if (detail.cardType === 'COURSE' || detail.cardType === 'VENUE') {
             cardType.value = detail.cardType;
@@ -849,7 +849,7 @@ async function loadTemplateDetail(id: number) {
                 sortOrder: child.sortOrder || 0,
             }));
         }
-        
+
         // 回显商品信息（如果有）
         if ((detail as any).productName) {
             baseForm.productName = (detail as any).productName;
@@ -860,7 +860,7 @@ async function loadTemplateDetail(id: number) {
             baseForm.skuImage = (detail as any).skuImage || '';
             baseForm.stockQuantity = (detail as any).stockQuantity || 999999;
             baseForm.brandId = (detail as any).brandId || '';
-            
+
             // 回显分类
             if ((detail as any).categoryId) {
                 // 需要根据categoryId查找完整的分类路径
@@ -871,7 +871,7 @@ async function loadTemplateDetail(id: number) {
                 selectedCategoryLabel.value = (detail as any).categoryName || '';
             }
         }
-        
+
     } catch (e: any) {
         message.error(e?.message || '加载模板详情失败');
     } finally {
@@ -1006,14 +1006,14 @@ async function submitCombo() {
 async function handleSubmit() {
     try {
         submitting.value = true;
-        
+
         // 根据 cardType 判断提交哪个
         if (cardType.value === 'COMBO') {
             await submitCombo();
         } else {
             await submitSingle();
         }
-        
+
         // 成功后跳转回列表
         router.push({ name: 'PackageTemplateInfo' });
     } catch (e: any) {
