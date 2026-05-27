@@ -47,7 +47,7 @@ const venueOptions = ref<Array<{ label: string; value: number }>>([]);
 
 // 子卡模板相关
 const childTemplateLoading = ref(false);
-const childTemplateOptions = ref<Array<{ label: string; value: number; cardType: string }>>([]);
+const childTemplateOptions = ref<Array<{ label: string; value: string; cardType: string }>>([]);
 
 // 商品分类相关
 const categoryLoading = ref(false);
@@ -202,10 +202,18 @@ async function loadVenues() {
 async function loadChildTemplates() {
     try {
         childTemplateLoading.value = true;
-        const templates = await getAvailableChildTemplatesApi();
-        childTemplateOptions.value = (templates || []).map((t) => ({
-            label: `${t.name}（${t.cardType} / ¥${(t.sellingPrice / 100).toFixed(2)}）`,
-            value: t.id,
+        
+        // 分别获取COURSE和VENUE类型的单卡模板
+        const [courseTemplates, venueTemplates] = await Promise.all([
+            getAvailableChildTemplatesApi('COURSE'),
+            getAvailableChildTemplatesApi('VENUE'),
+        ]);
+        
+        // 合并所有模板并转换格式
+        const allTemplates = [...(courseTemplates || []), ...(venueTemplates || [])];
+        childTemplateOptions.value = allTemplates.map((t) => ({
+            label: `${t.name}（${t.cardType === 'COURSE' ? '课程卡' : '场地卡'} / ¥${(t.sellingPrice / 100).toFixed(2)}）`,
+            value: String(t.id),
             cardType: t.cardType,
         }));
     } catch (e: any) {

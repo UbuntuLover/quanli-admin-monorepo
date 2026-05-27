@@ -134,7 +134,11 @@ async function fetchList() {
 
         const res = await getAdminGroupBuyActivityListApi(params);
         const normalized = normalizePageResult(res);
-        list.value = normalized.list;
+        // 确保列表中所有id都是字符串类型
+        list.value = normalized.list.map((item: any) => ({
+            ...item,
+            id: item.id ? String(item.id) : item.id,
+        }));
         pagination.value.total = normalized.total;
     } finally {
         loading.value = false;

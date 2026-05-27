@@ -29,12 +29,8 @@
                                 {{ getCardTypeText(templateDetail.cardType) }}
                             </a-tag>
                             <span class="name">{{ templateDetail.name }}</span>
-                            <a-tag v-if="templateDetail.isOnSale === 1" color="success">
-                                上架中
-                            </a-tag>
-                            <a-tag v-else color="default">
-                                已下架
-                            </a-tag>
+                            <a-tag v-if="templateDetail.isOnSale === 1" color="success">上架中</a-tag>
+                            <a-tag v-else color="default">已下架</a-tag>
                         </div>
                     </div>
                 </template>
@@ -50,7 +46,7 @@
                         {{ templateDetail.validityDays }}天
                     </a-descriptions-item>
                     <a-descriptions-item label="限购次数">
-                        {{ templateDetail.limitPerUser || '不限购' }}
+                        {{ (templateDetail as any).limitPerUser || '不限购' }}
                     </a-descriptions-item>
                     <a-descriptions-item label="原价">
                         <span class="original-price">¥{{ formatMoney(templateDetail.originalPrice) }}</span>
@@ -65,20 +61,20 @@
                         {{ templateDetail.venueTimes }}次
                     </a-descriptions-item>
                     <a-descriptions-item label="是否支持在线购买">
-                        {{ templateDetail.canOnlinePurchase === 1 ? '是' : '否' }}
+                        {{ (templateDetail as any).canOnlinePurchase === 1 ? '是' : '否' }}
                     </a-descriptions-item>
                     <a-descriptions-item label="库存">
-                        {{ templateDetail.stock === -1 ? '无限' : templateDetail.stock }}
+                        {{ (templateDetail as any).stock === -1 ? '无限' : ((templateDetail as any).stock ?? '-') }}
                     </a-descriptions-item>
                     <a-descriptions-item label="创建时间" :span="2">
                         {{ formatDateTime(templateDetail.createdAt) }}
                     </a-descriptions-item>
-                    <a-descriptions-item v-if="templateDetail.updatedAt" label="更新时间" :span="2">
-                        {{ formatDateTime(templateDetail.updatedAt) }}
+                    <a-descriptions-item v-if="(templateDetail as any).updatedAt" label="更新时间" :span="2">
+                        {{ formatDateTime((templateDetail as any).updatedAt) }}
                     </a-descriptions-item>
                 </a-descriptions>
 
-                <a-divider />
+                <a-divider/>
 
                 <div class="price-summary">
                     <div class="price-card">
@@ -98,19 +94,19 @@
                     <div v-if="templateDetail.originalPrice && templateDetail.sellingPrice" class="price-card">
                         <div class="price-label">折扣</div>
                         <div class="price-value discount">
-                            {{ Math.round(((templateDetail.sellingPrice / templateDetail.originalPrice) * 100)) / 10 }}折
+                            {{ Math.round((templateDetail.sellingPrice / templateDetail.originalPrice) * 100) / 10 }}折
                         </div>
                     </div>
                 </div>
 
-                <a-divider />
+                <a-divider/>
 
                 <template v-if="templateDetail.description">
                     <h3 class="section-title">模板描述</h3>
                     <div class="description">
                         {{ templateDetail.description }}
                     </div>
-                    <a-divider />
+                    <a-divider/>
                 </template>
 
                 <template v-if="getAssociatedCards().length">
@@ -121,23 +117,26 @@
                     <a-collapse class="card-collapse">
                         <a-collapse-panel
                             v-for="item in getAssociatedCards()"
-                            :key="item.id"
+                            :key="String(item.id || item.childTemplateId)"
                             :header="getCardHeader(item)"
                         >
                             <a-descriptions :column="2" bordered size="small">
-                                <a-descriptions-item label="模板编号">
-                                    {{ item.templateNo || item.no }}
+                                <a-descriptions-item v-if="item.templateNo || item.childTemplateId" label="模板ID">
+                                    {{ item.templateNo || item.childTemplateId }}
                                 </a-descriptions-item>
                                 <a-descriptions-item label="卡类型">
-                                    {{ getCardTypeText(item.cardType) }}
+                                    {{ getCardTypeText(item.cardType || item.childType) }}
                                 </a-descriptions-item>
-                                <a-descriptions-item label="有效期">
+                                <a-descriptions-item v-if="item.validityDays" label="有效期">
                                     {{ item.validityDays }}天
                                 </a-descriptions-item>
-                                <a-descriptions-item label="原价">
+                                <a-descriptions-item v-if="item.quantity" label="数量">
+                                    {{ item.quantity }}
+                                </a-descriptions-item>
+                                <a-descriptions-item v-if="item.originalPrice != null" label="原价">
                                     <span class="original-price">¥{{ formatMoney(item.originalPrice) }}</span>
                                 </a-descriptions-item>
-                                <a-descriptions-item label="售价">
+                                <a-descriptions-item v-if="item.sellingPrice != null" label="售价">
                                     <span class="selling-price">¥{{ formatMoney(item.sellingPrice) }}</span>
                                 </a-descriptions-item>
                                 <a-descriptions-item v-if="item.courseTimes" label="课程次数">
@@ -148,59 +147,17 @@
                                 </a-descriptions-item>
                             </a-descriptions>
                             <div style="margin-top: 16px;">
-                                <a-button type="link" size="small" @click.stop="handleViewChild(item.id)">
+                                <a-button
+                                    type="link"
+                                    size="small"
+                                    @click.stop="handleViewChild(item.id || item.childTemplateId)"
+                                >
                                     查看完整详情 →
                                 </a-button>
                             </div>
                         </a-collapse-panel>
                     </a-collapse>
-                    <a-divider />
-                </template>
-
-                <template v-if="getAssociatedProducts().length">
-                    <h3 class="section-title">关联商品 ({{ getAssociatedProducts().length }})</h3>
-                    <a-list
-                        :data-source="getAssociatedProducts()"
-                        item-layout="horizontal"
-                    >
-                        <template #renderItem="{ item }">
-                            <a-list-item>
-                                <a-list-item-meta>
-                                    <template #title>
-                                        <a-tag :color="getProductTypeColor(item.productType)">
-                                            {{ getProductTypeText(item.productType) }}
-                                        </a-tag>
-                                        {{ item.productName || item.name }}
-                                    </template>
-                                    <template #description>
-                                        <span style="margin-right: 16px;">
-                                            分类: {{ item.categoryName || item.category }}
-                                        </span>
-                                        <span style="margin-right: 16px;">
-                                            品牌: {{ item.brandName || item.brand }}
-                                        </span>
-                                        <span>
-                                            SKU: {{ item.skuName || item.sku }}
-                                        </span>
-                                    </template>
-                                </a-list-item-meta>
-                            </a-list-item>
-                        </template>
-                    </a-list>
-                    <a-divider />
-                </template>
-
-                <template v-if="getAssociatedCategories().length">
-                    <h3 class="section-title">关联分类 ({{ getAssociatedCategories().length }})</h3>
-                    <div class="category-list">
-                        <a-tag
-                            v-for="cat in getAssociatedCategories()"
-                            :key="cat.categoryId || cat.id"
-                            color="blue"
-                        >
-                            {{ cat.categoryName || cat.name }}
-                        </a-tag>
-                    </div>
+                    <a-divider/>
                 </template>
             </a-card>
         </a-spin>
@@ -208,16 +165,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-
+import {h, onMounted, ref, watch} from 'vue';
+import {useRoute, useRouter} from 'vue-router';
 import {
     Button as AButton,
     Card as ACard,
     Collapse as ACollapse,
     Descriptions as ADescriptions,
     Divider as ADivider,
-    List as AList,
     message,
     PageHeader as APageHeader,
     Popconfirm as APopconfirm,
@@ -227,102 +182,96 @@ import {
 } from 'ant-design-vue';
 
 const ADescriptionsItem = ADescriptions.Item;
-const AListItem = AList.Item;
-const AListItemMeta = AList.Item.Meta;
 const ACollapsePanel = ACollapse.Panel;
 
 import {
     deletePackageTemplateApi,
+    getChildrenOfComboApi,
     getPackageTemplateDetailApi,
     updatePackageTemplateStatusApi,
-    type PackageTemplateListDTO,
+    type PackageTemplateDetailDTO, getPackageTemplateDetailRawApi, getChildrenOfComboRawApi,
 } from '#/api/template/template';
+import type { PackageTemplateCompositionDTO } from '#/api/template/template';
 
 const route = useRoute();
 const router = useRouter();
 
 const loading = ref(false);
-const templateDetail = ref<PackageTemplateListDTO | null>(null);
+const templateDetail = ref<PackageTemplateDetailDTO | null>(null);
+const childTemplates = ref<PackageTemplateCompositionDTO[]>([]);
 
-function getAssociatedCards() {
-    if (!templateDetail.value) return [];
-    
-    const possibleFields = [
-        'childTemplates',
-        'children',
-        'childs',
-        'subTemplates',
-        'associatedCards',
-        'cards',
-        'cardList'
-    ];
-    
-    for (const field of possibleFields) {
-        const value = (templateDetail.value as any)[field];
-        if (Array.isArray(value) && value.length > 0) {
-            return value;
-        }
-    }
-    
-    return [];
+function getCurrentRouteId(): string | null {
+    const id = route.query.id;
+    return id == null ? null : String(id);
 }
 
-function getAssociatedProducts() {
-    if (!templateDetail.value) return [];
-    
-    const possibleFields = [
-        'products',
-        'productList',
-        'goods',
-        'goodsList'
-    ];
-    
-    for (const field of possibleFields) {
-        const value = (templateDetail.value as any)[field];
-        if (Array.isArray(value) && value.length > 0) {
-            return value;
-        }
-    }
-    
-    return [];
-}
-
-function getAssociatedCategories() {
-    if (!templateDetail.value) return [];
-    
-    const possibleFields = [
-        'productCategories',
-        'categories',
-        'categoryList'
-    ];
-    
-    for (const field of possibleFields) {
-        const value = (templateDetail.value as any)[field];
-        if (Array.isArray(value) && value.length > 0) {
-            return value;
-        }
-    }
-    
-    return [];
-}
-
-onMounted(() => {
-    const id = route.query.id as string;
-    if (id) {
-        fetchDetail(Number(id));
-    }
-});
-
-async function fetchDetail(id: number) {
+async function fetchDetail(id: string) {
     loading.value = true;
     try {
         const res = await getPackageTemplateDetailApi(id);
-        templateDetail.value = res || (res as any)?.data || null;
+
+        // 手动确保id都是字符串类型
+        if (res) {
+            if (res.id) {
+                res.id = String(res.id);
+            }
+            // 处理可能存在的子卡数据
+            if (Array.isArray((res as any).children)) {
+                (res as any).children = (res as any).children.map((child: any) => ({
+                    ...child,
+                    id: child.id ? String(child.id) : child.id,
+                    childTemplateId: child.childTemplateId ? String(child.childTemplateId) : child.childTemplateId,
+                }));
+            }
+        }
+        templateDetail.value = res || null;
+
+        if (templateDetail.value?.cardType === 'COMBO') {
+            const childrenRes = await getChildrenOfComboApi(id);
+            // 确保子卡数据中的id都是字符串类型
+            childTemplates.value = (childrenRes || []).map((child: any) => ({
+                ...child,
+                id: child.id ? String(child.id) : child.id,
+                childTemplateId: child.childTemplateId ? String(child.childTemplateId) : child.childTemplateId,
+            }));
+        } else {
+            childTemplates.value = [];
+        }
     } catch (e: any) {
         message.error(e?.message || '获取详情失败');
+        templateDetail.value = null;
+        childTemplates.value = [];
     } finally {
         loading.value = false;
     }
+}
+
+function loadByRoute() {
+    const id = getCurrentRouteId();
+    if (!id) {
+        templateDetail.value = null;
+        childTemplates.value = [];
+        return;
+    }
+    fetchDetail(id);
+}
+
+onMounted(loadByRoute);
+
+watch(
+    () => route.query.id,
+    (newId, oldId) => {
+        if (newId !== oldId && newId != null) {
+            fetchDetail(String(newId));
+        }
+    },
+);
+
+function getAssociatedCards() {
+    if (templateDetail.value?.cardType === 'COMBO' && childTemplates.value.length > 0) {
+        return childTemplates.value;
+    }
+    return [];
 }
 
 function handleBack() {
@@ -330,80 +279,67 @@ function handleBack() {
 }
 
 function handleEdit() {
-    if (templateDetail.value) {
-        router.push({
-            name: 'PackageTemplateEdit',
-            query: { 
-                id: templateDetail.value.id,
-                cardType: templateDetail.value.cardType
-            },
-        });
-    }
+    if (!templateDetail.value) return;
+    router.push({
+        name: 'PackageTemplateEdit',
+        query: {id: String(templateDetail.value.id), cardType: templateDetail.value.cardType},
+    });
 }
 
 async function handleDelete() {
     if (!templateDetail.value) return;
-
-    try {
-        await deletePackageTemplateApi(templateDetail.value.id);
-        message.success('删除成功');
-        router.push({ name: 'PackageTemplateInfo' });
-    } catch (e: any) {
-        message.error(e?.message || '删除失败');
-    }
+    await deletePackageTemplateApi(String(templateDetail.value.id));
+    message.success('删除成功');
+    router.push({name: 'PackageTemplateInfo'});
 }
 
 async function handleToggleStatus() {
     if (!templateDetail.value) return;
-
     const newStatus = templateDetail.value.isOnSale === 1 ? 0 : 1;
-    try {
-        await updatePackageTemplateStatusApi(templateDetail.value.id, newStatus);
-        templateDetail.value.isOnSale = newStatus;
-        message.success(newStatus === 1 ? '模板已上架' : '模板已下架');
-    } catch (e: any) {
-        message.error(e?.message || '操作失败');
-    }
+    await updatePackageTemplateStatusApi(String(templateDetail.value.id), newStatus);
+    templateDetail.value.isOnSale = newStatus;
+    message.success(newStatus === 1 ? '模板已上架' : '模板已下架');
 }
 
 function handleCopy() {
     if (!templateDetail.value) return;
-
     router.push({
         name: 'PackageTemplateTemplate',
-        query: { 
-            copyId: templateDetail.value.id,
-            cardType: templateDetail.value.cardType
-        },
+        query: {copyId: String(templateDetail.value.id), cardType: templateDetail.value.cardType},
     });
 }
 
-function handleViewChild(id: number) {
+function handleViewChild(id: string) {
     router.push({
         name: 'PackageTemplateDetail',
-        query: { id: id },
+        query: {id},
     });
 }
 
 function getCardHeader(item: any) {
-    return h('div', { class: 'card-header-title' }, [
-        h(ATag, { color: getCardTypeColor(item.cardType) }, { default: () => getCardTypeText(item.cardType) }),
-        h('span', { class: 'card-name' }, item.name),
-        h('span', { class: 'card-price' }, `¥${formatMoney(item.sellingPrice)}`)
+    const cardType = item.cardType || item.childType || '-';
+    const name = item.name || item.childTemplateName || item.displayName || '-';
+    const quantityRaw = item.quantity;
+    const quantityText = quantityRaw == null ? '' : String(quantityRaw);
+    const showQuantity = quantityText !== '' && quantityText !== '0' && quantityText !== '1';
+    const sellingPrice = item.sellingPrice;
+
+    return h('div', {class: 'card-header-title'}, [
+        h(ATag, {color: getCardTypeColor(cardType)}, {default: () => getCardTypeText(cardType)}),
+        h('span', {class: 'card-name'}, name),
+        showQuantity ? h('span', {class: 'card-quantity'}, ` ×${quantityText}`) : null,
+        h('span', {class: 'card-price'}, sellingPrice != null ? `¥${formatMoney(sellingPrice)}` : ''),
     ]);
 }
 
 function formatMoney(value?: number | null): string {
-    if (value === undefined || value === null) {
-        return '0.00';
-    }
+    if (value == null) return '0.00';
     return (value / 100).toFixed(2);
 }
 
 function formatDateTime(dateStr?: string): string {
     if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleString('zh-CN', {
+    return new Date(dateStr).toLocaleString('zh-CN', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -414,55 +350,17 @@ function formatDateTime(dateStr?: string): string {
 }
 
 function getCardTypeColor(cardType: string): string {
-    switch (cardType) {
-        case 'COURSE':
-            return 'blue';
-        case 'VENUE':
-            return 'green';
-        case 'COMBO':
-            return 'purple';
-        default:
-            return 'default';
-    }
+    if (cardType === 'COURSE') return 'blue';
+    if (cardType === 'VENUE') return 'green';
+    if (cardType === 'COMBO') return 'purple';
+    return 'default';
 }
 
 function getCardTypeText(cardType: string): string {
-    switch (cardType) {
-        case 'COURSE':
-            return '课程卡';
-        case 'VENUE':
-            return '场地卡';
-        case 'COMBO':
-            return '组合卡';
-        default:
-            return cardType || '-';
-    }
-}
-
-function getProductTypeColor(productType: string): string {
-    switch (productType) {
-        case 'COURSE':
-            return 'blue';
-        case 'VENUE':
-            return 'green';
-        case 'GOODS':
-            return 'orange';
-        default:
-            return 'default';
-    }
-}
-
-function getProductTypeText(productType: string): string {
-    switch (productType) {
-        case 'COURSE':
-            return '课程';
-        case 'VENUE':
-            return '场地';
-        case 'GOODS':
-            return '商品';
-        default:
-            return productType || '-';
-    }
+    if (cardType === 'COURSE') return '课程卡';
+    if (cardType === 'VENUE') return '场地卡';
+    if (cardType === 'COMBO') return '组合卡';
+    return cardType || '-';
 }
 </script>
 
@@ -553,12 +451,6 @@ function getProductTypeText(productType: string): string {
     background: var(--color-bg-container);
     border-radius: 8px;
     line-height: 1.8;
-}
-
-.category-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
 }
 
 .card-collapse {

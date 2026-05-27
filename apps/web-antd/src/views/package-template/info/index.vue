@@ -294,10 +294,14 @@ async function fetchTemplateList() {
 
 
         const list = res?.list || (res as any)?.data?.list || (res as any)?.items || [];
-        const total = res?.total || (res as any)?.data?.total || (res as any)?.totalCount || 0;
+        const totalVal = res?.total || (res as any)?.data?.total || (res as any)?.totalCount || 0;
 
-        templateList.value = list;
-        total.value = total;
+        // 确保列表中所有id都是字符串类型
+        templateList.value = list.map((item: any) => ({
+            ...item,
+            id: item.id ? String(item.id) : item.id,
+        }));
+        total.value = totalVal;
 
         queryForm.page = res?.page || (res as any)?.data?.page || queryForm.page;
         queryForm.pageSize = res?.pageSize || (res as any)?.data?.pageSize || queryForm.pageSize;

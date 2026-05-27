@@ -15,12 +15,12 @@
                     <a-row :gutter="16">
                         <a-col :span="8">
                             <a-form-item label="模板名称" required>
-                                <a-input v-model:value="baseForm.templateName" placeholder="请输入模板名称" />
+                                <a-input v-model:value="baseForm.templateName" placeholder="请输入模板名称"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="有效天数" required>
-                                <a-input-number v-model:value="baseForm.validityDays" :min="1" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.validityDays" :min="1" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
@@ -41,17 +41,20 @@
                     <a-row :gutter="16">
                         <a-col :span="8">
                             <a-form-item label="原价（元）" required>
-                                <a-input-number v-model:value="baseForm.originalPriceYuan" :min="0.01" :step="0.01" :precision="2" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.originalPriceYuan" :min="0.01" :step="0.01"
+                                                :precision="2" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="售价（元）" required>
-                                <a-input-number v-model:value="baseForm.sellingPriceYuan" :min="0.01" :step="0.01" :precision="2" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.sellingPriceYuan" :min="0.01" :step="0.01"
+                                                :precision="2" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="新客价（元）">
-                                <a-input-number v-model:value="baseForm.newCustomerPriceYuan" :min="0.01" :step="0.01" :precision="2" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.newCustomerPriceYuan" :min="0.01" :step="0.01"
+                                                :precision="2" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -69,17 +72,20 @@
                         <template v-if="isCourse">
                             <a-col :span="8">
                                 <a-form-item label="课程次数" required>
-                                    <a-input-number v-model:value="singleForm.courseTimes" :min="1" style="width: 100%" />
+                                    <a-input-number v-model:value="singleForm.courseTimes" :min="1"
+                                                    style="width: 100%"/>
                                 </a-form-item>
                             </a-col>
                             <a-col :span="8">
                                 <a-form-item label="课程时长(min)" required>
-                                    <a-input-number v-model:value="singleForm.courseDuration" :min="1" style="width: 100%" />
+                                    <a-input-number v-model:value="singleForm.courseDuration" :min="1"
+                                                    style="width: 100%"/>
                                 </a-form-item>
                             </a-col>
                             <a-col :span="8">
                                 <a-form-item label="可指定教练">
-                                    <a-switch v-model:checked="singleForm.canSpecifyCoach" checked-value="1" un-checked-value="0" />
+                                    <a-switch v-model:checked="singleForm.canSpecifyCoach" checked-value="1"
+                                              unchecked-value="0"/>
                                 </a-form-item>
                             </a-col>
                         </template>
@@ -87,7 +93,8 @@
                         <template v-if="isVenue">
                             <a-col :span="8">
                                 <a-form-item label="场地权益类型" required>
-                                    <a-select v-model:value="singleForm.venueBenefitType" placeholder="请选择场地权益类型">
+                                    <a-select v-model:value="singleForm.venueBenefitType"
+                                              placeholder="请选择场地权益类型">
                                         <a-select-option value="COUNT">次数卡</a-select-option>
                                         <a-select-option value="PERIOD">时段卡</a-select-option>
                                     </a-select>
@@ -95,7 +102,7 @@
                             </a-col>
                             <a-col :span="8" v-if="singleForm.venueBenefitType === 'COUNT'">
                                 <a-form-item label="场地次数" required>
-                                    <a-input-number v-model:value="singleForm.venueTimes" :min="1" style="width: 100%" />
+                                    <a-input-number v-model:value="singleForm.venueTimes" :min="1" style="width: 100%"/>
                                 </a-form-item>
                             </a-col>
                         </template>
@@ -105,17 +112,18 @@
                     <a-row :gutter="16">
                         <a-col :span="8">
                             <a-form-item label="商品名称" required>
-                                <a-input v-model:value="baseForm.productName" placeholder="请输入商品名称" />
+                                <a-input v-model:value="baseForm.productName" placeholder="请输入商品名称"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="副标题">
-                                <a-input v-model:value="baseForm.subtitle" placeholder="请输入副标题" />
+                                <a-input v-model:value="baseForm.subtitle" placeholder="请输入副标题"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="品牌ID">
-                                <a-input-number v-model:value="baseForm.brandId" placeholder="请输入品牌ID" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.brandId" placeholder="请输入品牌ID"
+                                                style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -127,7 +135,7 @@
                                     v-model:value="categoryValue"
                                     :options="categoryCascaderOptions"
                                     :loading="categoryLoading"
-                                    placeholder="请选择分类（必须选择第三级）"
+                                    placeholder="请选择分类（必须选择到第三级）"
                                     :show-search="{ filter }"
                                     style="width: 100%"
                                     expand-trigger="hover"
@@ -144,7 +152,8 @@
                     <a-row :gutter="16">
                         <a-col :span="24">
                             <a-form-item label="商品描述">
-                                <a-textarea v-model:value="baseForm.description" placeholder="请输入商品描述" :rows="3" />
+                                <a-textarea v-model:value="baseForm.description" placeholder="请输入商品描述"
+                                            :rows="3"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -152,12 +161,13 @@
                     <a-row :gutter="16">
                         <a-col :span="12">
                             <a-form-item label="主图URL">
-                                <a-input v-model:value="baseForm.mainImage" placeholder="请输入主图URL" />
+                                <a-input v-model:value="baseForm.mainImage" placeholder="请输入主图URL"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="12">
                             <a-form-item label="详情图URL（多张用逗号分隔）">
-                                <a-input v-model:value="baseForm.detailImagesText" placeholder="请输入详情图URL，多张用逗号分隔" />
+                                <a-input v-model:value="baseForm.detailImagesText"
+                                         placeholder="请输入详情图URL，多张用逗号分隔"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -166,17 +176,17 @@
                     <a-row :gutter="16">
                         <a-col :span="8">
                             <a-form-item label="SKU名称" required>
-                                <a-input v-model:value="baseForm.skuName" placeholder="请输入SKU名称" />
+                                <a-input v-model:value="baseForm.skuName" placeholder="请输入SKU名称"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="SKU图">
-                                <a-input v-model:value="baseForm.skuImage" placeholder="请输入SKU图URL" />
+                                <a-input v-model:value="baseForm.skuImage" placeholder="请输入SKU图URL"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="库存">
-                                <a-input-number v-model:value="baseForm.stockQuantity" :min="0" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.stockQuantity" :min="0" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -184,9 +194,10 @@
                     <a-row :gutter="16">
                         <a-col :span="24">
                             <a-form-item label="SKU属性（键值对）">
-                                <div v-for="(attr, index) in baseForm.attributesKv" :key="index" class="flex gap-2 mb-2">
-                                    <a-input v-model:value="attr.key" placeholder="属性名" style="width: 200px" />
-                                    <a-input v-model:value="attr.value" placeholder="属性值" style="width: 200px" />
+                                <div v-for="(attr, index) in baseForm.attributesKv" :key="index"
+                                     class="flex gap-2 mb-2">
+                                    <a-input v-model:value="attr.key" placeholder="属性名" style="width: 200px"/>
+                                    <a-input v-model:value="attr.value" placeholder="属性值" style="width: 200px"/>
                                     <a-button type="link" danger @click="removeAttrRow(index)">删除</a-button>
                                 </div>
                                 <a-button type="dashed" block @click="addAttrRow">+ 添加属性</a-button>
@@ -206,12 +217,13 @@
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="最大同时预约">
-                                <a-input-number v-model:value="baseForm.maxConcurrentBookings" :min="0" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.maxConcurrentBookings" :min="0"
+                                                style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="最大每日预约">
-                                <a-input-number v-model:value="baseForm.maxDailyBookings" :min="0" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.maxDailyBookings" :min="0" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -219,12 +231,12 @@
                     <a-row :gutter="16">
                         <a-col :span="8">
                             <a-form-item label="新品">
-                                <a-switch v-model:checked="baseForm.isNew" checked-value="1" un-checked-value="0" />
+                                <a-switch v-model:checked="baseForm.isNew" checked-value="1" unchecked-value="0"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="热卖">
-                                <a-switch v-model:checked="baseForm.isHot" checked-value="1" un-checked-value="0" />
+                                <a-switch v-model:checked="baseForm.isHot" checked-value="1" unchecked-value="0"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -236,12 +248,12 @@
                     <a-row :gutter="16">
                         <a-col :span="8">
                             <a-form-item label="模板名称" required>
-                                <a-input v-model:value="baseForm.templateName" placeholder="请输入模板名称" />
+                                <a-input v-model:value="baseForm.templateName" placeholder="请输入模板名称"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="有效天数" required>
-                                <a-input-number v-model:value="baseForm.validityDays" :min="1" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.validityDays" :min="1" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
@@ -262,17 +274,20 @@
                     <a-row :gutter="16">
                         <a-col :span="8">
                             <a-form-item label="原价（元）" required>
-                                <a-input-number v-model:value="baseForm.originalPriceYuan" :min="0.01" :step="0.01" :precision="2" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.originalPriceYuan" :min="0.01" :step="0.01"
+                                                :precision="2" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="售价（元）" required>
-                                <a-input-number v-model:value="baseForm.sellingPriceYuan" :min="0.01" :step="0.01" :precision="2" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.sellingPriceYuan" :min="0.01" :step="0.01"
+                                                :precision="2" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="新客价（元）">
-                                <a-input-number v-model:value="baseForm.newCustomerPriceYuan" :min="0.01" :step="0.01" :precision="2" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.newCustomerPriceYuan" :min="0.01" :step="0.01"
+                                                :precision="2" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -281,17 +296,18 @@
                     <a-row :gutter="16">
                         <a-col :span="8">
                             <a-form-item label="商品名称" required>
-                                <a-input v-model:value="baseForm.productName" placeholder="请输入商品名称" />
+                                <a-input v-model:value="baseForm.productName" placeholder="请输入商品名称"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="副标题">
-                                <a-input v-model:value="baseForm.subtitle" placeholder="请输入副标题" />
+                                <a-input v-model:value="baseForm.subtitle" placeholder="请输入副标题"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="品牌ID">
-                                <a-input-number v-model:value="baseForm.brandId" placeholder="请输入品牌ID" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.brandId" placeholder="请输入品牌ID"
+                                                style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -320,7 +336,8 @@
                     <a-row :gutter="16">
                         <a-col :span="24">
                             <a-form-item label="商品描述">
-                                <a-textarea v-model:value="baseForm.description" placeholder="请输入商品描述" :rows="3" />
+                                <a-textarea v-model:value="baseForm.description" placeholder="请输入商品描述"
+                                            :rows="3"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -328,12 +345,13 @@
                     <a-row :gutter="16">
                         <a-col :span="12">
                             <a-form-item label="主图URL">
-                                <a-input v-model:value="baseForm.mainImage" placeholder="请输入主图URL" />
+                                <a-input v-model:value="baseForm.mainImage" placeholder="请输入主图URL"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="12">
                             <a-form-item label="详情图URL（多张用逗号分隔）">
-                                <a-input v-model:value="baseForm.detailImagesText" placeholder="请输入详情图URL，多张用逗号分隔" />
+                                <a-input v-model:value="baseForm.detailImagesText"
+                                         placeholder="请输入详情图URL，多张用逗号分隔"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -342,17 +360,17 @@
                     <a-row :gutter="16">
                         <a-col :span="8">
                             <a-form-item label="SKU名称" required>
-                                <a-input v-model:value="baseForm.skuName" placeholder="请输入SKU名称" />
+                                <a-input v-model:value="baseForm.skuName" placeholder="请输入SKU名称"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="SKU图">
-                                <a-input v-model:value="baseForm.skuImage" placeholder="请输入SKU图URL" />
+                                <a-input v-model:value="baseForm.skuImage" placeholder="请输入SKU图URL"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="库存">
-                                <a-input-number v-model:value="baseForm.stockQuantity" :min="0" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.stockQuantity" :min="0" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -360,9 +378,10 @@
                     <a-row :gutter="16">
                         <a-col :span="24">
                             <a-form-item label="SKU属性（键值对）">
-                                <div v-for="(attr, index) in baseForm.attributesKv" :key="index" class="flex gap-2 mb-2">
-                                    <a-input v-model:value="attr.key" placeholder="属性名" style="width: 200px" />
-                                    <a-input v-model:value="attr.value" placeholder="属性值" style="width: 200px" />
+                                <div v-for="(attr, index) in baseForm.attributesKv" :key="index"
+                                     class="flex gap-2 mb-2">
+                                    <a-input v-model:value="attr.key" placeholder="属性名" style="width: 200px"/>
+                                    <a-input v-model:value="attr.value" placeholder="属性值" style="width: 200px"/>
                                     <a-button type="link" danger @click="removeAttrRow(index)">删除</a-button>
                                 </div>
                                 <a-button type="dashed" block @click="addAttrRow">+ 添加属性</a-button>
@@ -382,12 +401,13 @@
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="最大同时预约">
-                                <a-input-number v-model:value="baseForm.maxConcurrentBookings" :min="0" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.maxConcurrentBookings" :min="0"
+                                                style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="最大每日预约">
-                                <a-input-number v-model:value="baseForm.maxDailyBookings" :min="0" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.maxDailyBookings" :min="0" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -395,17 +415,16 @@
                     <a-row :gutter="16">
                         <a-col :span="8">
                             <a-form-item label="新品">
-                                <a-switch v-model:checked="baseForm.isNew" checked-value="1" un-checked-value="0" />
+                                <a-switch v-model:checked="baseForm.isNew" checked-value="1" unchecked-value="0"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="热卖">
-                                <a-switch v-model:checked="baseForm.isHot" checked-value="1" un-checked-value="0" />
+                                <a-switch v-model:checked="baseForm.isHot" checked-value="1" unchecked-value="0"/>
                             </a-form-item>
                         </a-col>
                     </a-row>
 
-                    <!-- 组合卡专属：子卡选择 -->
                     <a-divider orientation="left">子卡配置</a-divider>
                     <a-row>
                         <a-col :span="24">
@@ -430,12 +449,12 @@
                             </a-col>
                             <a-col :span="6">
                                 <a-form-item label="数量" required>
-                                    <a-input-number v-model:value="child.quantity" :min="1" style="width: 100%" />
+                                    <a-input-number v-model:value="child.quantity" :min="1" style="width: 100%"/>
                                 </a-form-item>
                             </a-col>
                             <a-col :span="6">
                                 <a-form-item label="排序">
-                                    <a-input-number v-model:value="child.sortOrder" :min="0" style="width: 100%" />
+                                    <a-input-number v-model:value="child.sortOrder" :min="0" style="width: 100%"/>
                                 </a-form-item>
                             </a-col>
                             <a-col :span="4">
@@ -447,7 +466,7 @@
                         <a-row :gutter="16">
                             <a-col :span="24">
                                 <a-form-item label="展示名称">
-                                    <a-input v-model:value="child.displayName" placeholder="留空则使用子卡默认名称" />
+                                    <a-input v-model:value="child.displayName" placeholder="留空则使用子卡默认名称"/>
                                 </a-form-item>
                             </a-col>
                         </a-row>
@@ -460,12 +479,12 @@
                     <a-row :gutter="16">
                         <a-col :span="8">
                             <a-form-item label="模板名称" required>
-                                <a-input v-model:value="baseForm.templateName" placeholder="请输入模板名称" />
+                                <a-input v-model:value="baseForm.templateName" placeholder="请输入模板名称"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
                             <a-form-item label="有效天数" required>
-                                <a-input-number v-model:value="baseForm.validityDays" :min="1" style="width: 100%" />
+                                <a-input-number v-model:value="baseForm.validityDays" :min="1" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="8">
@@ -489,8 +508,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import {computed, onMounted, reactive, ref} from 'vue';
+import {useRoute, useRouter} from 'vue-router';
 import {
     Button as AButton,
     Card as ACard,
@@ -520,15 +539,22 @@ import {
     updateSinglePackageProductApi,
     type PackageProductApi,
 } from '#/api/template/template';
-import { getAllVenuesApi, type VenueDetailDTO } from '#/api/venue/list';
-import {  getCategoryTreeApi } from '#/api/products/productCategory';
-import { type CategoryDTO } from '#/types/category';
+import {getAllVenuesApi, type VenueDetailDTO} from '#/api/venue/list';
+import {getCategoryTreeApi} from '#/api/products/productCategory';
+import type {CategoryDTO} from '#/types/category';
 
 type CardType = 'COURSE' | 'VENUE' | 'COMBO';
 
 interface KvItem {
     key: string;
     value: string;
+}
+
+interface CascaderOption {
+    value: string;
+    label: string;
+    level: number;
+    children?: CascaderOption[];
 }
 
 const route = useRoute();
@@ -539,43 +565,31 @@ const pageLoading = ref(false);
 const venueLoading = ref(false);
 const venueOptions = ref<Array<{ label: string; value: number }>>([]);
 
-// 子卡模板相关
 const childTemplateLoading = ref(false);
-const childTemplateOptions = ref<Array<{ label: string; value: number; cardType: string }>>([]);
+const childTemplateOptions = ref<Array<{ label: string; value: string; cardType: string }>>([]);
 
-// 商品分类相关
 const categoryLoading = ref(false);
 const categoryCascaderOptions = ref<CascaderOption[]>([]);
+const selectedCategoryLabel = ref('');
+const categoryValue = ref<string[]>([]);
 
-// 用于显示已选分类的标签
-const selectedCategoryLabel = ref<string>('');
-
-// 级联选择的值（完整路径数组）
-const categoryValue = ref<(string)[]>([]);
-
-// 当前编辑的模板ID
-const editingId = ref<number | null>(null);
-
-// 当前卡类型（从 URL 参数获取，用于判断显示哪个表单）
+const editingId = ref<string | null>(null);
 const cardType = ref<CardType | null>(null);
 
-// 通用表单
 const baseForm = reactive({
     templateName: '',
     validityDays: 30,
 
-    // 展示层单位：元（支持小数）
     originalPriceYuan: 100,
     sellingPriceYuan: 90,
     newCustomerPriceYuan: undefined as number | undefined,
 
-    // 改为下拉多选
     applicableVenues: [] as number[],
     maxConcurrentBookings: 2,
     maxDailyBookings: undefined as number | undefined,
 
     productName: '',
-    brandId: '' as number | '',
+    brandId: undefined as number | undefined,
     subtitle: '',
     description: '',
     mainImage: '',
@@ -589,11 +603,9 @@ const baseForm = reactive({
     skuImage: '',
     stockQuantity: 999999,
 
-    // SKU属性：动态键值对
-    attributesKv: [{ key: '', value: '' }] as KvItem[],
+    attributesKv: [{key: '', value: ''}] as KvItem[],
 });
 
-// 单卡专属
 const singleForm = reactive({
     cardType: 'COURSE' as CardType,
     courseTimes: undefined as number | undefined,
@@ -603,44 +615,27 @@ const singleForm = reactive({
     venueTimes: undefined as number | undefined,
 });
 
-// 组合卡专属
 const comboChildren = ref<PackageProductApi.CreateComboChildItem[]>([
-    { childTemplateId: 0, quantity: 1, displayName: '', sortOrder: 0 },
+    {childTemplateId: '0', quantity: 1, displayName: '', sortOrder: 0},
 ]);
 
 const isCourse = computed(() => singleForm.cardType === 'COURSE');
 const isVenue = computed(() => singleForm.cardType === 'VENUE');
-
-// 判断是否为单卡（课程卡或场地卡）
 const isSingleCard = computed(() => cardType.value === 'COURSE' || cardType.value === 'VENUE');
-
-// 判断是否为组合卡
 const isComboCard = computed(() => cardType.value === 'COMBO');
 
-// 获取卡类型显示文本
 function getCardTypeText(type: CardType | null): string {
-    switch (type) {
-        case 'COURSE':
-            return '课程卡';
-        case 'VENUE':
-            return '场地卡';
-        case 'COMBO':
-            return '组合卡';
-        default:
-            return '';
-    }
+    if (type === 'COURSE') return '课程卡';
+    if (type === 'VENUE') return '场地卡';
+    if (type === 'COMBO') return '组合卡';
+    return '';
 }
 
-// 页面标题
 const pageTitle = computed(() => {
     const typeText = getCardTypeText(cardType.value);
-    if (editingId.value) {
-        return `编辑${typeText}`;
-    }
-    return `创建${typeText}`;
+    return editingId.value ? `编辑${typeText}` : `创建${typeText}`;
 });
 
-/** 元 => 分（四舍五入） */
 function yuanToCent(yuan: number): number {
     return Math.round(yuan * 100);
 }
@@ -663,19 +658,19 @@ function buildAttributesFromKv(): Record<string, string> | undefined {
 }
 
 function addAttrRow() {
-    baseForm.attributesKv.push({ key: '', value: '' });
+    baseForm.attributesKv.push({key: '', value: ''});
 }
 
 function removeAttrRow(index: number) {
     baseForm.attributesKv.splice(index, 1);
     if (!baseForm.attributesKv.length) {
-        baseForm.attributesKv.push({ key: '', value: '' });
+        baseForm.attributesKv.push({key: '', value: ''});
     }
 }
 
 function addChild() {
     comboChildren.value.push({
-        childTemplateId: 0,
+        childTemplateId: '0',
         quantity: 1,
         displayName: '',
         sortOrder: comboChildren.value.length,
@@ -686,29 +681,39 @@ function removeChild(index: number) {
     comboChildren.value.splice(index, 1);
 }
 
+function findNodeByPath(path: string[], options: CascaderOption[]): CascaderOption | null {
+    let currentList = options;
+    let currentNode: CascaderOption | null = null;
+
+    for (const val of path) {
+        const hit = currentList.find((n) => n.value === val);
+        if (!hit) return null;
+        currentNode = hit;
+        currentList = hit.children || [];
+    }
+
+    return currentNode;
+}
+
+function isLevel3Path(path: string[]): boolean {
+    if (!path?.length) return false;
+    const node = findNodeByPath(path, categoryCascaderOptions.value);
+    return !!node && node.level === 3;
+}
+
 function validateCommon() {
     if (!baseForm.templateName.trim()) throw new Error('模板名称不能为空');
     if (!baseForm.productName.trim()) throw new Error('商品名称不能为空');
     if (!baseForm.skuName.trim()) throw new Error('SKU名称不能为空');
-    if (!categoryValue.value || categoryValue.value.length === 0) {
-        throw new Error('请选择分类');
-    }
-    if (categoryValue.value.length !== 3) {
-        throw new Error('商品必须挂在第三级分类上，请重新选择');
-    }
-    if (baseForm.validityDays <= 0) throw new Error('有效天数必须大于0');
 
-    if (baseForm.originalPriceYuan <= 0 || baseForm.sellingPriceYuan <= 0) {
-        throw new Error('价格必须大于0');
-    }
-    if (baseForm.sellingPriceYuan > baseForm.originalPriceYuan) {
-        throw new Error('售价不能高于原价');
-    }
+    if (!categoryValue.value?.length) throw new Error('请选择分类');
+    if (!isLevel3Path(categoryValue.value)) throw new Error('商品必须挂在第三级分类上，请重新选择');
+
+    if (baseForm.validityDays <= 0) throw new Error('有效天数必须大于0');
+    if (baseForm.originalPriceYuan <= 0 || baseForm.sellingPriceYuan <= 0) throw new Error('价格必须大于0');
+    if (baseForm.sellingPriceYuan > baseForm.originalPriceYuan) throw new Error('售价不能高于原价');
 }
 
-/**
- * 获取选中的第三级分类ID（用于提交）
- */
 function getCategoryId(): string {
     return categoryValue.value[categoryValue.value.length - 1];
 }
@@ -734,7 +739,7 @@ async function loadChildTemplates() {
         const templates = await getAvailableChildTemplatesApi();
         childTemplateOptions.value = (templates || []).map((t) => ({
             label: `${t.name}（${t.cardType} / ¥${(t.sellingPrice / 100).toFixed(2)}）`,
-            value: t.id,
+            value: String(t.id),
             cardType: t.cardType,
         }));
     } catch (e: any) {
@@ -756,122 +761,139 @@ async function loadCategories() {
     }
 }
 
-/**
- * 构建级联选择器选项（只显示到第三级）
- */
-function buildCascaderOptions(categories: CategoryDTO[], level: number = 1): CascaderOption[] {
-    if (level > 3) {
-        return [];
+function buildCascaderOptions(categories: CategoryDTO[], level = 1): CascaderOption[] {
+    return categories.map((cat) => ({
+        value: String(cat.id),
+        label: cat.name,
+        level,
+        children: cat.children?.length ? buildCascaderOptions(cat.children, level + 1) : undefined,
+    }));
+}
+
+function pathToLabel(pathValues: string[], options: CascaderOption[]): string {
+    const labels: string[] = [];
+    let current = options;
+
+    for (const val of pathValues) {
+        const hit = current.find((n) => n.value === val);
+        if (!hit) break;
+        labels.push(hit.label);
+        current = hit.children || [];
     }
 
-    return categories.map((cat) => {
-        const option: CascaderOption = {
-            value: cat.id,
-            label: cat.name,
-        };
+    return labels.join(' / ');
+}
 
-        if (cat.children && cat.children.length > 0 && level < 3) {
-            option.children = buildCascaderOptions(cat.children, level + 1);
+function findPathById(targetId: string, options: CascaderOption[]): string[] | null {
+    const dfs = (nodes: CascaderOption[], path: string[]): string[] | null => {
+        for (const node of nodes) {
+            const next = [...path, node.value];
+            if (node.value === targetId) return next;
+            if (node.children?.length) {
+                const found = dfs(node.children, next);
+                if (found) return found;
+            }
         }
-
-        return option;
-    });
+        return null;
+    };
+    return dfs(options, []);
 }
 
-/**
- * 查找分类的完整路径标签
- */
-function findCategoryPath(values: (string | number)[], options: CascaderOption[]): string {
-    if (!values || values.length === 0) return '';
-
-    const [first, ...rest] = values;
-    const current = options.find((opt) => String(opt.value) === String(first));
-
-    if (!current) return '';
-
-    if (rest.length === 0) {
-        return current.label;
-    }
-
-    if (current.children) {
-        const childPath = findCategoryPath(rest, current.children);
-        return childPath ? `${current.label} / ${childPath}` : current.label;
-    }
-
-    return current.label;
-}
-
-/**
- * 级联选择变化时更新显示标签
- */
 function onCategoryChange(values: (string | number)[]) {
-    selectedCategoryLabel.value = findCategoryPath(values, categoryCascaderOptions.value);
+    const path = (values || []).map((v) => String(v));
+    selectedCategoryLabel.value = pathToLabel(path, categoryCascaderOptions.value);
 }
 
-/**
- * 级联选择器搜索过滤函数
- */
 function filter(inputValue: string, path: CascaderOption[]) {
-    return path.some((option) => (option.label as string).toLowerCase().includes(inputValue.toLowerCase()));
+    return path.some((option) => option.label.toLowerCase().includes(inputValue.toLowerCase()));
 }
 
-/**
- * 加载模板详情
- */
-async function loadTemplateDetail(id: number) {
+async function loadTemplateDetail(id: string) {
     pageLoading.value = true;
     try {
         const detail = await getPackageTemplateDetailApi(id);
 
-        // 回显基础信息
+        // 手动确保id都是字符串类型
+        if (detail) {
+            detail.id = String(detail.id);
+            if (Array.isArray(detail.children)) {
+                detail.children = detail.children.map((child) => ({
+                    ...child,
+                    id: child.id ? String(child.id) : child.id,
+                    childTemplateId: child.childTemplateId ? String(child.childTemplateId) : child.childTemplateId,
+                }));
+            }
+        }
+
         baseForm.templateName = detail.name;
         baseForm.validityDays = detail.validityDays;
         baseForm.originalPriceYuan = (detail.originalPrice || 0) / 100;
         baseForm.sellingPriceYuan = (detail.sellingPrice || 0) / 100;
 
-        // 根据卡类型设置表单类型
+        if (detail.newCustomerPrice != null) {
+            baseForm.newCustomerPriceYuan = detail.newCustomerPrice / 100;
+        }
+
+        baseForm.maxConcurrentBookings = detail.maxConcurrentBookings || 2;
+        baseForm.maxDailyBookings = detail.maxDailyBookings ?? undefined;
+        baseForm.applicableVenues = detail.applicableVenues || [];
+        baseForm.deliveryMode = (detail.deliveryMode as 'DIRECT' | 'MANUAL_ACTIVATE') || 'MANUAL_ACTIVATE';
+        baseForm.isNew = detail.isNew === 1 ? '1' : '0';
+        baseForm.isHot = detail.isHot === 1 ? '1' : '0';
+
         if (detail.cardType === 'COURSE' || detail.cardType === 'VENUE') {
             cardType.value = detail.cardType;
             singleForm.cardType = detail.cardType;
             singleForm.courseTimes = detail.courseTimes || undefined;
             singleForm.courseDuration = detail.courseDuration || undefined;
-            singleForm.canSpecifyCoach = (detail as any).canSpecifyCoach ? '1' : '0';
+            singleForm.canSpecifyCoach = detail.canSpecifyCoach === 1 ? '1' : '0';
             singleForm.venueBenefitType = detail.venueBenefitType || undefined;
             singleForm.venueTimes = detail.venueTimes || undefined;
         } else if (detail.cardType === 'COMBO') {
             cardType.value = 'COMBO';
-            // 加载子卡数据
-            const childTemplates = (detail as any).childTemplates || (detail as any).children || [];
-            comboChildren.value = childTemplates.map((child: any) => ({
-                childTemplateId: child.id || child.templateId,
+            comboChildren.value = (detail.children || []).map((child) => ({
+                childTemplateId: String(child.childTemplateId),
                 quantity: child.quantity || 1,
-                displayName: child.displayName || child.name || '',
+                displayName: child.displayName || '',
                 sortOrder: child.sortOrder || 0,
             }));
+            if (!comboChildren.value.length) addChild();
         }
 
-        // 回显商品信息（如果有）
-        if ((detail as any).productName) {
-            baseForm.productName = (detail as any).productName;
-            baseForm.subtitle = (detail as any).subtitle || '';
-            baseForm.description = (detail as any).description || '';
-            baseForm.mainImage = (detail as any).mainImage || '';
-            baseForm.skuName = (detail as any).skuName || '';
-            baseForm.skuImage = (detail as any).skuImage || '';
-            baseForm.stockQuantity = (detail as any).stockQuantity || 999999;
-            baseForm.brandId = (detail as any).brandId || '';
+        if (detail.productName) {
+            baseForm.productName = detail.productName;
+            baseForm.subtitle = detail.subtitle || '';
+            baseForm.description = detail.description || '';
+            baseForm.mainImage = detail.mainImage || '';
+            baseForm.detailImagesText = (detail.detailImages || []).join(',');
+            baseForm.brandId = detail.brandId != null ? String(detail.brandId) : undefined;
+        }
 
-            // 回显分类
-            if ((detail as any).categoryId) {
-                // 需要根据categoryId查找完整的分类路径
-                const categoryId = (detail as any).categoryId;
-                // 这里需要根据实际情况设置 categoryValue
-                // 由于级联选择需要完整路径，暂时只设置最后一级
-                categoryValue.value = [String(categoryId)];
-                selectedCategoryLabel.value = (detail as any).categoryName || '';
+        if (detail.skuName) {
+            baseForm.skuName = detail.skuName;
+            baseForm.skuImage = detail.skuImage || '';
+            baseForm.stockQuantity = detail.stockQuantity || 999999;
+
+            const attrs = detail.attributes || {};
+            baseForm.attributesKv =
+                Object.keys(attrs).length > 0
+                    ? Object.entries(attrs).map(([key, value]) => ({key, value}))
+                    : [{key: '', value: ''}];
+        }
+
+        if (detail.categoryId) {
+            const categoryIdStr = String(detail.categoryId);
+            const fullPath = findPathById(categoryIdStr, categoryCascaderOptions.value);
+
+            if (fullPath) {
+                categoryValue.value = fullPath;
+                selectedCategoryLabel.value = pathToLabel(fullPath, categoryCascaderOptions.value);
+            } else {
+                // 不再给 cascader 塞裸ID，避免显示数字
+                categoryValue.value = [];
+                selectedCategoryLabel.value = detail.categoryName || '当前分类已失效/不在分类树中';
             }
         }
-
     } catch (e: any) {
         message.error(e?.message || '加载模板详情失败');
     } finally {
@@ -896,18 +918,16 @@ async function submitSingle() {
 
     const payload: PackageProductApi.CreateSinglePackageProductRequest = {
         templateName: baseForm.templateName.trim(),
-        cardType: singleForm.cardType,
+        cardType: singleForm.cardType as 'COURSE' | 'VENUE',
 
         courseTimes: isCourse.value ? singleForm.courseTimes : null,
         courseDuration: isCourse.value ? singleForm.courseDuration : null,
         canSpecifyCoach: Number(singleForm.canSpecifyCoach),
 
         validityDays: baseForm.validityDays,
-        // 提交层单位：分
         originalPrice: yuanToCent(baseForm.originalPriceYuan),
         sellingPrice: yuanToCent(baseForm.sellingPriceYuan),
-        newCustomerPrice:
-            baseForm.newCustomerPriceYuan != null ? yuanToCent(baseForm.newCustomerPriceYuan) : null,
+        newCustomerPrice: baseForm.newCustomerPriceYuan != null ? yuanToCent(baseForm.newCustomerPriceYuan) : null,
 
         applicableVenues: baseForm.applicableVenues.length ? baseForm.applicableVenues : null,
         maxConcurrentBookings: baseForm.maxConcurrentBookings,
@@ -918,7 +938,7 @@ async function submitSingle() {
 
         productName: baseForm.productName.trim(),
         categoryId: getCategoryId(),
-        brandId: baseForm.brandId || null,
+        brandId: baseForm.brandId != null ? String(baseForm.brandId) : null,
         subtitle: baseForm.subtitle || null,
         description: baseForm.description || null,
         mainImage: baseForm.mainImage || null,
@@ -949,14 +969,14 @@ async function submitCombo() {
     if (!comboChildren.value.length) throw new Error('组合卡至少一个子项');
 
     const normalizedChildren = comboChildren.value.map((c, idx) => ({
-        childTemplateId: c.childTemplateId,
+        childTemplateId: String(c.childTemplateId),
         quantity: Number(c.quantity),
         displayName: c.displayName?.trim() || null,
         sortOrder: Number.isFinite(c.sortOrder as number) ? (c.sortOrder as number) : idx,
     }));
 
     normalizedChildren.forEach((c, idx) => {
-        if (!c.childTemplateId || c.childTemplateId <= 0) throw new Error(`第${idx + 1}行 childTemplateId 不合法`);
+        if (!c.childTemplateId || Number(c.childTemplateId) <= 0) throw new Error(`第${idx + 1}行 childTemplateId 不合法`);
         if (!c.quantity || c.quantity <= 0) throw new Error(`第${idx + 1}行 quantity 必须大于0`);
     });
 
@@ -964,11 +984,9 @@ async function submitCombo() {
         templateName: baseForm.templateName.trim(),
 
         validityDays: baseForm.validityDays,
-        // 提交层单位：分
         originalPrice: yuanToCent(baseForm.originalPriceYuan),
         sellingPrice: yuanToCent(baseForm.sellingPriceYuan),
-        newCustomerPrice:
-            baseForm.newCustomerPriceYuan != null ? yuanToCent(baseForm.newCustomerPriceYuan) : null,
+        newCustomerPrice: baseForm.newCustomerPriceYuan != null ? yuanToCent(baseForm.newCustomerPriceYuan) : null,
 
         applicableVenues: baseForm.applicableVenues.length ? baseForm.applicableVenues : null,
         maxConcurrentBookings: baseForm.maxConcurrentBookings,
@@ -978,7 +996,7 @@ async function submitCombo() {
 
         productName: baseForm.productName.trim(),
         categoryId: getCategoryId(),
-        brandId: baseForm.brandId || null,
+        brandId: baseForm.brandId != null ? String(baseForm.brandId) : null,
         subtitle: baseForm.subtitle || null,
         description: baseForm.description || null,
         mainImage: baseForm.mainImage || null,
@@ -1007,15 +1025,10 @@ async function handleSubmit() {
     try {
         submitting.value = true;
 
-        // 根据 cardType 判断提交哪个
-        if (cardType.value === 'COMBO') {
-            await submitCombo();
-        } else {
-            await submitSingle();
-        }
+        if (cardType.value === 'COMBO') await submitCombo();
+        else await submitSingle();
 
-        // 成功后跳转回列表
-        router.push({ name: 'PackageTemplateInfo' });
+        router.push({name: 'PackageTemplateInfo'});
     } catch (e: any) {
         message.error(e?.message || '提交失败');
     } finally {
@@ -1027,23 +1040,23 @@ function handleBack() {
     router.back();
 }
 
-onMounted(() => {
-    // 加载基础数据
+onMounted(async () => {
+    // 先加载分类，确保回显时可以找到完整路径
+    await loadCategories();
+
+    // 其它可并发
     loadVenues();
     loadChildTemplates();
-    loadCategories();
 
-    // 从 URL 参数获取卡类型
     const type = route.query.cardType as CardType;
     if (type && ['COURSE', 'VENUE', 'COMBO'].includes(type)) {
         cardType.value = type;
     }
 
-    // 检查是否有编辑的ID
     const id = route.query.id;
     if (id) {
-        editingId.value = Number(id);
-        loadTemplateDetail(editingId.value);
+        editingId.value = String(id);
+        await loadTemplateDetail(editingId.value);
     }
 });
 </script>

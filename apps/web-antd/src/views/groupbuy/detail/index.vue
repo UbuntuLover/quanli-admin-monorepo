@@ -99,6 +99,10 @@ async function loadDetail(id: string) {
     loading.value = true;
     try {
         const data = await getAdminGroupBuyActivityDetailApi(id);
+        // 手动确保id都是字符串类型
+        if (data) {
+            data.id = String(data.id);
+        }
         detail.value = data;
     } catch (e: any) {
         message.error(e?.message || '加载活动详情失败');

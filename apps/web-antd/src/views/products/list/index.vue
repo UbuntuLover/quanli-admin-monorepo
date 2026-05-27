@@ -415,7 +415,11 @@ async function fetchProductList() {
             ...queryForm,
         });
 
-        productList.value = res.list || [];
+        // 确保列表中所有id都是字符串类型
+        productList.value = (res.list || []).map((item: any) => ({
+            ...item,
+            id: item.id ? String(item.id) : item.id,
+        }));
         total.value = res.total || 0;
         queryForm.page = res.page || queryForm.page;
         queryForm.pageSize = res.pageSize || queryForm.pageSize;
