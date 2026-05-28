@@ -177,12 +177,15 @@
             <div class="grant-step-content">
                 <!-- Step 1 -->
                 <div v-if="grantStepCurrent === 0" class="grant-confirm-block">
-                    <a-alert
-                        type="warning"
-                        show-icon
-                        message="你正在执行免费发放操作"
-                        description="该操作会直接向用户发放权益卡，不产生订单，请确认模板信息无误。"
-                    />
+                    <div class="grant-warning-box">
+                        <span class="warning-icon">⚠</span>
+                        <div>
+                            <p><strong>你正在执行免费发放操作</strong></p>
+                            <p style="font-size: 13px; color: var(--color-text-secondary); margin-top: 4px;">
+                                该操作会直接向用户发放权益卡，不产生订单，请确认模板信息无误。
+                            </p>
+                        </div>
+                    </div>
                     <div class="grant-template-summary">
                         <p><strong>模板名称：</strong>{{ grantContext.templateName }}</p>
                         <p><strong>模板编号：</strong>{{ grantContext.templateNo }}</p>
@@ -781,16 +784,49 @@ function getCardTypeText(cardType: string): string {
 
 .grant-template-summary {
     padding: 12px 14px;
-    border: 1px solid #f0f0f0;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    background: #fafafa;
+    background: var(--color-bg-container);
 }
 
 .grant-template-summary p {
     margin: 6px 0;
+    color: var(--color-text);
 }
 
 .grant-user-block .selected-member {
     margin-top: 12px;
+}
+
+/* 警告提示框样式 */
+.grant-warning-box {
+    display: flex;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-warning);
+    margin-bottom: 16px;
+}
+
+.grant-warning-box .warning-icon {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+    font-size: 18px;
+    color: var(--color-warning);
+    flex-shrink: 0;
+}
+
+.grant-warning-box > div {
+    flex: 1;
+}
+
+.grant-warning-box p {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 14px;
 }
 </style>
