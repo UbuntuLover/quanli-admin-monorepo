@@ -341,7 +341,7 @@ onMounted(() => {
                 </a-card>
 
                 <!-- 权益信息卡片 -->
-                <a-card :bordered="false" class="mb-4">
+                <a-card hoverable :bordered="false" class="mb-4">
                     <template #title>
                         <span class="text-base font-semibold">权益信息</span>
                     </template>
@@ -373,11 +373,11 @@ onMounted(() => {
                                         </div>
                                         <div class="package-name">{{ pkg.packageName }}</div>
                                         <div class="package-info">
-                                            <div v-if="pkg.courseRemainingTimes !== undefined" class="package-stat">
+                                            <div v-if="pkg.cardType !== 'COMBO' && pkg.courseRemainingTimes !== undefined" class="package-stat">
                                                 <span class="stat-label">剩余课程:</span>
                                                 <span class="stat-value">{{ pkg.courseRemainingTimes }}次</span>
                                             </div>
-                                            <div v-if="pkg.venueRemainingTimes !== undefined" class="package-stat">
+                                            <div v-if="pkg.cardType !== 'COMBO' && pkg.venueRemainingTimes !== undefined" class="package-stat">
                                                 <span class="stat-label">剩余场地:</span>
                                                 <span class="stat-value">{{ pkg.venueRemainingTimes }}次</span>
                                             </div>
@@ -456,6 +456,13 @@ onMounted(() => {
     background: var(--color-bg-container);
     border-radius: 8px;
     border: 1px solid var(--ant-color-border-secondary, rgba(120, 120, 120, 0.25));
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.package-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--ant-color-primary);
+    transform: translateY(-2px);
 }
 .package-header {
     display: flex;

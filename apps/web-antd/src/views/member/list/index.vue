@@ -18,7 +18,6 @@ import {
     Table as ATable,
     TableColumn as ATableColumn,
     Avatar as AAvatar,
-    message,
 } from 'ant-design-vue';
 import {
     getAdminMemberListApi,
