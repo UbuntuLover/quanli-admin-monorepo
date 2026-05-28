@@ -12,7 +12,6 @@ import {
     Menu as AMenu,
     Modal as AModal,
     PageHeader as APageHeader,
-    Popconfirm as APopconfirm,
     Row as ARow,
     Spin as ASpin,
     Tag as ATag,
@@ -25,6 +24,7 @@ import {
     MoreOutlined as AMoreOutlined,
     AlignRightOutlined as ASnowflakeOutlined,
     UnlockOutlined as AUnlockOutlined,
+    ArrowsAltOutlined as AArrowsAltOutlined,
     DeleteOutlined as ADeleteOutlined,
 } from '@ant-design/icons-vue';
 
@@ -34,6 +34,7 @@ import {
     freezeAdminMemberPackageApi,
     unfreezeAdminMemberPackageApi,
     deleteAdminMemberPackageApi,
+    extendAdminMemberPackageValidityApi,
     type AdminMemberPackageListDTO,
     type AdminMemberPackageDetailDTO,
 } from '#/api/member-packages/member-packages';
@@ -59,6 +60,9 @@ const freezeDays = ref(7);
 const freezeReason = ref('');
 const deleteModalVisible = ref(false);
 const deleteReason = ref('');
+const extendModalVisible = ref(false);
+const extendDays = ref(30);
+const extendReason = ref('');
 const currentActionPkg = ref<AdminMemberPackageListDTO | null>(null);
 
 
@@ -251,6 +255,29 @@ async function handleUnfreeze(pkg: AdminMemberPackageListDTO) {
         await loadData();
     } catch (e: any) {
         message.error(e?.message || '解冻失败');
+    }
+}
+
+async function handleExtend(pkg: AdminMemberPackageListDTO) {
+    currentActionPkg.value = pkg;
+    closeActionMenu();
+    extendDays.value = 30;
+    extendReason.value = '';
+    extendModalVisible.value = true;
+}
+
+async function confirmExtend() {
+    const pkg = currentActionPkg.value;
+    if (!pkg) return;
+
+    try {
+        await extendAdminMemberPackageValidityApi(pkg.id, extendDays.value);
+        message.success('延期成功');
+        extendModalVisible.value = false;
+        currentActionPkg.value = null;
+        await loadData();
+    } catch (e: any) {
+        message.error(e?.message || '延期失败');
     }
 }
 
@@ -748,6 +775,14 @@ onMounted(() => {
                     mode="vertical"
                     :items="[
                         {
+                          key: 'extend',
+                          label: '延长有效期',
+                          icon: h(AArrowsAltOutlined),
+                          onClick: () => {
+                              handleExtend(actionMenuTarget.pkg)
+                          }
+                        },
+                        {
                             key: 'freeze',
                             label: actionMenuTarget.pkg.status === 4 ? '解冻权益卡' : '冻结权益卡',
                             icon: actionMenuTarget.pkg.status === 4 ? h(AUnlockOutlined) : h(ASnowflakeOutlined),
@@ -810,6 +845,35 @@ onMounted(() => {
                                 v-model:value="deleteReason"
                                 :rows="3"
                                 placeholder="请输入删除原因"
+                            />
+                        </div>
+                    </div>
+                </a-modal>
+
+                <!-- 延期弹窗 -->
+                <a-modal
+                    v-model:open="extendModalVisible"
+                    title="延长有效期"
+                    :width="400"
+                    @cancel="extendModalVisible = false"
+                    @ok="confirmExtend"
+                >
+                    <div class="extend-form">
+                        <div class="form-item">
+                            <label>延长天数</label>
+                            <a-input-number
+                                v-model:value="extendDays"
+                                :min="1"
+                                :max="365"
+                                class="w-full"
+                            />
+                        </div>
+                        <div class="form-item">
+                            <label>延期原因（选填）</label>
+                            <a-textarea
+                                v-model:value="extendReason"
+                                :rows="3"
+                                placeholder="请输入延期原因"
                             />
                         </div>
                     </div>
