@@ -508,7 +508,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, reactive, ref} from 'vue';
+import {computed, nextTick, onMounted, reactive, ref, watch} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
 import {
     Button as AButton,
@@ -575,6 +575,10 @@ const categoryValue = ref<string[]>([]);
 
 const editingId = ref<string | null>(null);
 const cardType = ref<CardType | null>(null);
+
+// 用于延迟设置分类值
+const pendingCategoryId = ref<string | null>(null);
+const pendingCategoryName = ref<string | null>(null);
 
 const baseForm = reactive({
     templateName: '',
@@ -881,20 +885,13 @@ async function loadTemplateDetail(id: string) {
                     : [{key: '', value: ''}];
         }
 
+        // 处理分类回显 - 延迟设置，等待分类选项加载完成
         if (detail.categoryId) {
-            const categoryIdStr = String(detail.categoryId);
-            const fullPath = findPathById(categoryIdStr, categoryCascaderOptions.value);
-
-            if (fullPath) {
-                categoryValue.value = fullPath;
-                selectedCategoryLabel.value = pathToLabel(fullPath, categoryCascaderOptions.value);
-            } else {
-                // 不再给 cascader 塞裸ID，避免显示数字
-                categoryValue.value = [];
-                selectedCategoryLabel.value = detail.categoryName || '当前分类已失效/不在分类树中';
-            }
+            pendingCategoryId.value = String(detail.categoryId);
+            pendingCategoryName.value = detail.categoryName || null;
         }
     } catch (e: any) {
+        console.error('加载模板详情失败:', e);
         message.error(e?.message || '加载模板详情失败');
     } finally {
         pageLoading.value = false;
@@ -1039,6 +1036,30 @@ async function handleSubmit() {
 function handleBack() {
     router.back();
 }
+
+// 监听分类选项加载完成后设置分类值
+watch(
+    () => categoryCascaderOptions.value.length,
+    async (newLength) => {
+        if (newLength > 0 && pendingCategoryId.value) {
+            const fullPath = findPathById(pendingCategoryId.value, categoryCascaderOptions.value);
+            
+            if (fullPath) {
+                categoryValue.value = [];
+                await nextTick();
+                categoryValue.value = [...fullPath];
+                selectedCategoryLabel.value = pathToLabel(fullPath, categoryCascaderOptions.value);
+            } else {
+                categoryValue.value = [];
+                selectedCategoryLabel.value = pendingCategoryName.value || '当前分类已失效/不在分类树中';
+            }
+            
+            // 重置等待状态
+            pendingCategoryId.value = null;
+            pendingCategoryName.value = null;
+        }
+    }
+);
 
 onMounted(async () => {
     // 先加载分类，确保回显时可以找到完整路径

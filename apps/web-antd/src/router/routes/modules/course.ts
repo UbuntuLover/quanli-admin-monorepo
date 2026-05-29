@@ -21,6 +21,26 @@ const routes: RouteRecordRaw[] = [
                     title: '未来一周排课表',
                 },
             },
+            {
+                name: 'CourseBookingList',
+                path: '/course/booking-list',
+                component: () => import('#/views/course/booking-list/index.vue'),
+                meta: {
+                    icon: 'lucide:calendar-range',
+                    keepAlive: true,
+                    title: '课程预约列表',
+                }
+            },
+            {
+                name: 'CourseBookingDetail',
+                path: '/course/booking-detail/:id',
+                component: () => import('#/views/course/booking-detail/index.vue'),
+                meta: {
+                    hideInMenu: true,
+                    icon: 'lucide:notebook-tabs',
+                    title: '课程预约详情',
+                }
+            }
         ],
     },
 ];

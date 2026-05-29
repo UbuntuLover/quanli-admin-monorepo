@@ -1,6 +1,6 @@
-import { requestClient } from '#/api/request';
-import type { NormalizedPageResult, PageResult } from '#/api/_shared/page';
-import { normalizePageResult } from '#/api/_shared/page';
+import {requestClient} from '#/api/request';
+import type {NormalizedPageResult, PageResult} from '#/api/_shared/page';
+import {normalizePageResult} from '#/api/_shared/page';
 
 /** =========================
  * 管理后台 - 预约管理 DTO
@@ -8,17 +8,15 @@ import { normalizePageResult } from '#/api/_shared/page';
  * ========================= */
 
 /**
- * 预约状态（按你后端注释）
- * 1-已预约/待确认
- * 2-已确认
- * 3-进行中
- * 9-已取消
+ * 预约状态兼容：
+ * - 管理列表常见：1/2/3/9
+ * - 详情VO注释里可能出现：1/2/3/4/5/6
  */
-export type BookingStatus = 1 | 2 | 3 | 9;
+export type BookingStatus = 1 | 2 | 3 | 4 | 5 | 6 | 9;
 
 export interface AdminBookingQueryDTO {
-    page?: number; // 后端是 Long
-    pageSize?: number; // 后端是 Long
+    page?: number;
+    pageSize?: number;
     memberId?: string;
     coachId?: string;
     venueId?: string;
@@ -29,43 +27,8 @@ export interface AdminBookingQueryDTO {
     keyword?: string;
 }
 
-/**
- * 预约列表项（根据常见字段 + 你的业务场景定义）
- * 如果后端字段略有差异，可按实际返回补充/删减。
- */
+/** 列表项（前端展示友好结构） */
 export interface AdminBookingListItemVO {
-    bookingId: string;
-    bookingNo?: string;
-    memberId?: string;
-    memberName?: string | null;
-    memberPhone?: string | null;
-    venueId?: string;
-    venueName?: string | null;
-    coachId?: string;
-    coachName?: string | null;
-    packageId?: string | null;
-    packageName?: string | null;
-    bookingDate?: string | null; // yyyy-MM-dd
-    startTime?: string | null; // HH:mm:ss or HH:mm
-    endTime?: string | null; // HH:mm:ss or HH:mm
-    courseDuration?: number | null;
-    status?: BookingStatus | number;
-    statusText?: string | null;
-    remark?: string | null;
-    createdAt?: string | null;
-    updatedAt?: string | null;
-}
-
-/**
- * 分页VO（你的后端是 AdminBookingPageVO，文件内容没完整给出）
- * 这里做兼容建模：优先适配 records/list/items + total/page/pageSize。
- */
-export interface AdminBookingPageVO extends PageResult<AdminBookingListItemVO> {
-    // 可按后端真实字段继续扩展
-}
-
-/** 预约详情（后端 BookingDetailVO 未完整提供，这里给通用版） */
-export interface BookingDetailVO {
     bookingId: string;
     bookingNo?: string;
     memberId?: string;
@@ -87,6 +50,67 @@ export interface BookingDetailVO {
     cancelReason?: string | null;
     createdAt?: string | null;
     updatedAt?: string | null;
+
+    // 兼容你的页面里偶尔用到 record.member.name 的写法
+    member?: {
+        id?: string | null;
+        name?: string | null;
+        phone?: string | null;
+    };
+}
+
+export interface AdminBookingPageVO extends PageResult<AdminBookingListItemVO> {
+}
+
+
+interface MemberInfo {
+    id: string;
+    name: string | null;
+    phone: string | null;
+    avatar: string | null;
+}
+
+interface PackageInfo {
+    id: string;
+    name: string | null;
+    type: string | null;
+}
+
+interface CoachInfo {
+    id: string;
+    name: string | null;
+    avatar: string | null;
+}
+
+interface VenueInfo {
+    id: string;
+    name: string | null;
+    address: string | null;
+    phone: string | null;
+}
+
+/** 详情VO（前端标准化后） */
+export interface BookingDetailVO {
+    id: string;
+    bookingNo?: string;
+
+    member: MemberInfo;
+    packageInfo: PackageInfo;
+    coach: CoachInfo;
+    venue: VenueInfo;
+
+    bookingDate?: string | null;
+    startTime?: string | null;
+    endTime?: string | null;
+    duration?: number | null;
+    status?: BookingStatus | number;
+
+    cancelReason?: string | null;
+    checkinTime?: string | null;
+    checkoutTime?: string | null;
+    remark?: string | null;
+    createdAt?: string | null;
+
 }
 
 /** 管理员创建预约 */
@@ -111,8 +135,8 @@ export interface AdminRescheduleBookingDTO {
     bookingId?: string | null;
     newVenueId?: string | null;
     newCoachId?: string | null;
-    newBookingDate?: string | null; // yyyy-MM-dd
-    newStartTime?: string | null; // HH:mm:ss / HH:mm
+    newBookingDate?: string | null;
+    newStartTime?: string | null;
     newCourseDuration?: number | null;
     reason?: string | null;
     operatorId?: string | null;
@@ -142,79 +166,174 @@ export interface AdminUpdateBookingStatusDTO {
 
 const ADMIN_BOOKINGS_BASE = '/api/admin/bookings';
 
-/** 分页查询预约列表 */
+/** 通用：后端数据 -> 前端详情结构 */
+function normalizeBookingDetail(raw: any): BookingDetailVO {
+    const member = raw?.member ?? {};
+    const coach = raw?.coach ?? {};
+    const venue = raw?.venue ?? {};
+    const packageInfo = raw?.packageInfo ?? {};
+
+    return {
+        bookingId: String(raw?.bookingId ?? raw?.id ?? ''),
+        bookingNo: raw?.bookingNo ?? undefined,
+
+        memberId: raw?.memberId != null ? String(raw.memberId) : member?.id != null ? String(member.id) : undefined,
+        memberName: raw?.memberName ?? member?.name ?? null,
+        memberPhone: raw?.memberPhone ?? member?.phone ?? null,
+
+        venueId: raw?.venueId != null ? String(raw.venueId) : venue?.id != null ? String(venue.id) : undefined,
+        venueName: raw?.venueName ?? venue?.name ?? null,
+
+        coachId: raw?.coachId != null ? String(raw.coachId) : coach?.id != null ? String(coach.id) : undefined,
+        coachName: raw?.coachName ?? coach?.name ?? null,
+
+        packageId:
+            raw?.packageId != null
+                ? String(raw.packageId)
+                : packageInfo?.id != null
+                    ? String(packageInfo.id)
+                    : null,
+        packageName: raw?.packageName ?? packageInfo?.name ?? null,
+
+        bookingDate: raw?.bookingDate ?? null,
+        startTime: raw?.startTime ?? null,
+        endTime: raw?.endTime ?? null,
+        courseDuration: raw?.courseDuration ?? raw?.duration ?? null,
+        status: raw?.status,
+        statusText: raw?.statusText ?? null,
+
+        cancelReason: raw?.cancelReason ?? null,
+        checkinTime: raw?.checkinTime ?? null,
+        checkoutTime: raw?.checkoutTime ?? null,
+        remark: raw?.remark ?? null,
+
+        createdAt: raw?.createdAt ?? null,
+        updatedAt: raw?.updatedAt ?? null,
+
+        member: {
+            id: member?.id != null ? String(member.id) : null,
+            name: member?.name ?? null,
+            phone: member?.phone ?? null,
+        },
+        coach: {
+            id: coach?.id != null ? String(coach.id) : null,
+            name: coach?.name ?? null,
+        },
+        venue: {
+            id: venue?.id != null ? String(venue.id) : null,
+            name: venue?.name ?? null,
+        },
+        packageInfo: {
+            id: packageInfo?.id != null ? String(packageInfo.id) : null,
+            name: packageInfo?.name ?? null,
+        },
+    };
+}
+
+/** 通用：后端列表项 -> 前端列表项结构 */
+function normalizeBookingListItem(raw: any): AdminBookingListItemVO {
+    const d = normalizeBookingDetail(raw);
+    return {
+        bookingId: d.bookingId,
+        bookingNo: d.bookingNo,
+        memberId: d.memberId,
+        memberName: d.memberName,
+        memberPhone: d.memberPhone,
+        venueId: d.venueId,
+        venueName: d.venueName,
+        coachId: d.coachId,
+        coachName: d.coachName,
+        packageId: d.packageId,
+        packageName: d.packageName,
+        bookingDate: d.bookingDate,
+        startTime: d.startTime,
+        endTime: d.endTime,
+        courseDuration: d.courseDuration,
+        status: d.status,
+        statusText: d.statusText,
+        remark: d.remark,
+        cancelReason: d.cancelReason,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+        member: d.member,
+    };
+}
+
+/** 分页查询预约列表（原始） */
 export function pageAdminBookingsApi(data: AdminBookingQueryDTO) {
     const payload = {
         ...data,
-        memberId: data.memberId ? String(data.memberId) : undefined,
-        coachId: data.coachId ? String(data.coachId) : undefined,
-        venueId: data.venueId ? String(data.venueId) : undefined,
-        packageId: data.packageId ? String(data.packageId) : undefined,
+        memberId: data.memberId ? Number(data.memberId) : undefined,
+        coachId: data.coachId ? Number(data.coachId) : undefined,
+        venueId: data.venueId ? Number(data.venueId) : undefined,
+        packageId: data.packageId ? Number(data.packageId) : undefined,
         page: data.page ?? 1,
         pageSize: data.pageSize ?? 10,
     };
-
     return requestClient.post<AdminBookingPageVO>(`${ADMIN_BOOKINGS_BASE}/page`, payload);
 }
 
-/** 分页结果标准化（页面侧直接用） */
+/** 分页结果标准化（页面推荐用这个） */
 export async function pageAdminBookingsNormalizedApi(
     data: AdminBookingQueryDTO,
 ): Promise<NormalizedPageResult<AdminBookingListItemVO>> {
     const res = await pageAdminBookingsApi(data);
-    return normalizePageResult<AdminBookingListItemVO>(res);
+    const normalized = normalizePageResult<any>(res);
+    return {
+        ...normalized,
+        list: (normalized.list || []).map(normalizeBookingListItem),
+    };
 }
 
 /** 查询预约详情 */
-export function getAdminBookingDetailApi(bookingId: string) {
-    return requestClient.get<BookingDetailVO>(`${ADMIN_BOOKINGS_BASE}/${bookingId}`);
+export async function getAdminBookingDetailApi(bookingId: string): Promise<BookingDetailVO> {
+    const res = await requestClient.get<any>(`${ADMIN_BOOKINGS_BASE}/${bookingId}`);
+    return normalizeBookingDetail(res);
 }
 
 /** 管理员手动创建预约 */
-export function createAdminBookingApi(data: AdminCreateBookingDTO) {
+export async function createAdminBookingApi(data: AdminCreateBookingDTO): Promise<BookingDetailVO> {
     const payload = {
         ...data,
-        memberId: data.memberId ? String(data.memberId) : undefined,
-        venueId: data.venueId ? String(data.venueId) : undefined,
-        coachId: data.coachId ? String(data.coachId) : undefined,
-        packageId: data.packageId ? String(data.packageId) : undefined,
-        operatorId: data.operatorId ? String(data.operatorId) : undefined,
+        memberId: data.memberId ? Number(data.memberId) : undefined,
+        venueId: data.venueId ? Number(data.venueId) : undefined,
+        coachId: data.coachId ? Number(data.coachId) : undefined,
+        packageId: data.packageId ? Number(data.packageId) : undefined,
+        operatorId: data.operatorId ? Number(data.operatorId) : undefined,
     };
-
-    return requestClient.post<BookingDetailVO>(`${ADMIN_BOOKINGS_BASE}/create-manual`, payload);
+    const res = await requestClient.post<any>(`${ADMIN_BOOKINGS_BASE}/create-manual`, payload);
+    return normalizeBookingDetail(res);
 }
 
 /** 管理员调整预约 */
-export function rescheduleAdminBookingApi(data: AdminRescheduleBookingDTO) {
+export async function rescheduleAdminBookingApi(data: AdminRescheduleBookingDTO): Promise<BookingDetailVO> {
     const payload = {
         ...data,
-        bookingId: data.bookingId ? String(data.bookingId) : undefined,
-        newVenueId: data.newVenueId ? String(data.newVenueId) : undefined,
-        newCoachId: data.newCoachId ? String(data.newCoachId) : undefined,
-        operatorId: data.operatorId ? String(data.operatorId) : undefined,
+        bookingId: data.bookingId ? Number(data.bookingId) : undefined,
+        newVenueId: data.newVenueId ? Number(data.newVenueId) : undefined,
+        newCoachId: data.newCoachId ? Number(data.newCoachId) : undefined,
+        operatorId: data.operatorId ? Number(data.operatorId) : undefined,
     };
-
-    return requestClient.post<BookingDetailVO>(`${ADMIN_BOOKINGS_BASE}/reschedule`, payload);
+    const res = await requestClient.post<any>(`${ADMIN_BOOKINGS_BASE}/reschedule`, payload);
+    return normalizeBookingDetail(res);
 }
 
 /** 管理员取消预约 */
 export function cancelAdminBookingApi(data: AdminCancelBookingDTO) {
     const payload = {
         ...data,
-        bookingId: data.bookingId ? String(data.bookingId) : undefined,
-        operatorId: data.operatorId ? String(data.operatorId) : undefined,
+        bookingId: data.bookingId ? Number(data.bookingId) : undefined,
+        operatorId: data.operatorId ? Number(data.operatorId) : undefined,
     };
-
-    return requestClient.post<BookingDetailVO>(`${ADMIN_BOOKINGS_BASE}/cancel`, payload);
+    return requestClient.post(`${ADMIN_BOOKINGS_BASE}/cancel`, payload);
 }
 
 /** 管理员更新预约状态 */
 export function updateAdminBookingStatusApi(data: AdminUpdateBookingStatusDTO) {
     const payload = {
         ...data,
-        bookingId: data.bookingId ? String(data.bookingId) : undefined,
-        operatorId: data.operatorId ? String(data.operatorId) : undefined,
+        bookingId: data.bookingId ? Number(data.bookingId) : undefined,
+        operatorId: data.operatorId ? Number(data.operatorId) : undefined,
     };
-
-    return requestClient.post<BookingDetailVO>(`${ADMIN_BOOKINGS_BASE}/status`, payload);
+    return requestClient.post(`${ADMIN_BOOKINGS_BASE}/update-status`, payload);
 }
