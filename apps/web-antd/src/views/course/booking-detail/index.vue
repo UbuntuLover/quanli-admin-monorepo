@@ -47,7 +47,7 @@
                             {{ bookingDetail.endTime?.substring(0, 8) || '-' }}
                         </a-descriptions-item>
                         <a-descriptions-item label="课程时长(分钟)">
-                            {{ bookingDetail.duration || '-' }}
+                            {{ bookingDetail.courseDuration || '-' }}
                         </a-descriptions-item>
                         <a-descriptions-item label="备注">
                             {{ bookingDetail.remark || '-' }}
@@ -127,11 +127,11 @@ import {
 } from 'ant-design-vue';
 
 import {
-    getAdminBookingDetailApi,
-    updateAdminBookingStatusApi,
-    cancelAdminBookingApi,
     type BookingDetailVO,
     type BookingStatus,
+    cancelAdminBookingApi,
+    getAdminBookingDetailApi,
+    updateAdminBookingStatusApi,
 } from '#/api/booking/bookings';
 
 const ATextarea = AInput.TextArea;
@@ -169,10 +169,10 @@ function getStatusColor(status: BookingStatus | number | undefined): string {
 async function fetchDetail(id: string) {
     loading.value = true;
     try {
-        const res = await getAdminBookingDetailApi(id);
-        bookingDetail.value = res;
+        debugger
+        bookingDetail.value = await getAdminBookingDetailApi(id);
     } catch (e: any) {
-        message.error(e?.message || '获取预约详情失败');
+        await message.error(e?.message || '获取预约详情失败');
         bookingDetail.value = null;
     } finally {
         loading.value = false;

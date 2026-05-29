@@ -281,9 +281,10 @@ function handleTableChange(paginationInfo: { current: number; pageSize: number }
 }
 
 function handleDetail(record: AdminBookingListItemVO) {
+    debugger
     router.push({
         name: 'CourseBookingDetail',
-        params: { id: String(record.id) },
+        params: { id: record.bookingId },
     });
 }
 

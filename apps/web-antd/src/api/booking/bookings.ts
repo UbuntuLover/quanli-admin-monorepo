@@ -287,7 +287,7 @@ export async function pageAdminBookingsNormalizedApi(
 
 /** 查询预约详情 */
 export async function getAdminBookingDetailApi(bookingId: string): Promise<BookingDetailVO> {
-    const res = await requestClient.get<any>(`${ADMIN_BOOKINGS_BASE}/${bookingId}`);
+    const res = await requestClient.get(`${ADMIN_BOOKINGS_BASE}/${bookingId}`);
     return normalizeBookingDetail(res);
 }
 
