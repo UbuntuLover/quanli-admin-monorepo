@@ -327,8 +327,9 @@ async function fetchDetailByListFallback() {
         form.avatar = baseInfo.value.avatar || '';
         form.introduction = baseInfo.value.introduction || '';
         certText.value = (baseInfo.value.certifications || []).join(', ');
+        tagText.value = (baseInfo.value.tags || []).join(', ');
 
-        // 编辑态回填头像（如果有）
+               // 编辑态回填头像（如果有）
         avatarFile.value = form.avatar
             ? {
                 fileId: -1,
@@ -366,6 +367,7 @@ async function handleSubmit() {
             tags: splitCsv(tagText.value),
             introduction: form.introduction || undefined,
             photos: photoFiles.value.map((x) => x.previewUrl || x.url).filter(Boolean),
+            coachId: coachId.value,
         };
 
         if (ENABLE_MOCK) {
