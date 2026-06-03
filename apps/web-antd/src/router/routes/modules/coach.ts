@@ -5,7 +5,7 @@ import {$t} from '#/locales';
 const routes: RouteRecordRaw[] = [
     {
         meta: {
-            icon: 'lucide:layout-dashboard',
+            icon: 'lucide:roller-coaster',
             order: -1,
             title: $t('page.dashboard.title'),
         },
@@ -48,7 +48,7 @@ const routes: RouteRecordRaw[] = [
                 path: '/coach/info-change',
                 component: () => import('#/views/coach/info-change/index.vue'),
                 meta: {
-                    icon: 'lucide:file-pen-line',
+                    hideInMenu: true,
                     keepAlive: true,
                     title: '教练信息编辑',
                 },
