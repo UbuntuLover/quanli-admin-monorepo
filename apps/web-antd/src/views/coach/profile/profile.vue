@@ -49,10 +49,10 @@
                                     <div class="flex items-center gap-3">
                                         <div class="avatar-wrapper">
                                             <a-avatar
-                                                v-if="item.avatar"
+                                                v-if="item.avatar && avatarUrlMap.get(item.avatar)"
                                                 class="coach-avatar"
                                                 :size="56"
-                                                :src="item.avatar"
+                                                :src="avatarUrlMap.get(item.avatar)"
                                             />
                                             <div v-else class="avatar-char" :style="{ backgroundColor: getAvatarColor(item.name) }">
                                                 {{ getAvatarChar(item.name) }}
@@ -143,6 +143,7 @@ import {
     Tag as ATag,
 } from 'ant-design-vue';
 import { listCoachesApi, type CoachVO } from '#/api/coach/profile';
+import { getFilePreviewApi } from '#/api/file';
 
 defineOptions({ name: 'CoachProfileList' });
 
@@ -152,6 +153,9 @@ const mockEmptyMode = ref(false);
 const router = useRouter();
 const loading = ref(false);
 const coachList = ref<CoachVO[]>([]);
+
+// 存储头像 fileId -> URL 的映射
+const avatarUrlMap = ref<Map<number, string>>(new Map());
 
 const hasCoaches = computed(() => coachList.value.length > 0);
 
@@ -231,8 +235,32 @@ async function fetchList() {
         }
         const result = await listCoachesApi();
         coachList.value = Array.isArray(result) ? result : [];
+        
+        // 批量获取头像 URL
+        await loadAvatarUrls();
     } finally {
         loading.value = false;
+    }
+}
+
+// 批量加载头像 URL
+async function loadAvatarUrls() {
+    // 清空旧的映射
+    avatarUrlMap.value.clear();
+    
+    // 获取所有需要加载头像的 fileId
+    const avatarIds = coachList.value
+        .filter((item) => item.avatar && item.avatar > 0)
+        .map((item) => item.avatar!);
+    
+    // 逐个获取头像 URL
+    for (const avatarId of avatarIds) {
+        try {
+            const previewRes = await getFilePreviewApi(avatarId);
+            avatarUrlMap.value.set(avatarId, previewRes.previewUrl);
+        } catch (e) {
+            console.error(`获取头像 ${avatarId} 预览失败:`, e);
+        }
     }
 }
 

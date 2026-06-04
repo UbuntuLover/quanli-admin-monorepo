@@ -132,7 +132,7 @@ import {
     Textarea as ATextarea,
     message,
 } from 'ant-design-vue';
-import {getFilePreviewApi} from "#/api/file";
+import {batchGetFilePreviewApi} from '#/api/file';
 
 defineOptions({name: 'CoachProfileEdit'});
 
@@ -341,36 +341,86 @@ async function fetchDetailByListFallback() {
         certText.value = (baseInfo.value.certifications || []).join(', ');
         tagText.value = (baseInfo.value.tags || []).join(', ');
 
-        // 编辑态回填头像（如果有）
+        // 收集所有需要获取预览的文件 ID（头像 + 照片）
+        const fileIds: string[] = [];
+        
+        // 头像 fileId
         if (form.avatar && form.avatar > 0) {
-            try {
-                // 调用真实接口获取预览 URL
-                const previewRes = await getFilePreviewApi(form.avatar);
-                fetchedAvatarUrl.value = previewRes.previewUrl;
-                avatarFile.value = {
-                    fileId: form.avatar,
-                    mediaType: 'image',
-                    url: previewRes.previewUrl,
-                    previewUrl: previewRes.previewUrl,
-                    originalName: 'avatar',
-                    size: 0,
-                    mimeType: 'image/jpeg',
-                    objectKey: '',
-                    coverUrl: '',
-                };
-            } catch (e) {
-                console.error('获取头像预览失败:', e);
-                fetchedAvatarUrl.value = '';
-                avatarFile.value = null;
-            }
-        } else {
-            fetchedAvatarUrl.value = '';
-            avatarFile.value = null;
+            fileIds.push(String(form.avatar));
+        }
+        
+        // 照片 fileId 数组
+        if (baseInfo.value.photoFiles && baseInfo.value.photoFiles.length > 0) {
+            fileIds.push(...baseInfo.value.photoFiles.filter((id) => Number(id) > 0));
         }
 
-
-        // 你的 list 接口暂无 photos 字段，先保持空
-        photoFiles.value = [];
+        // 批量获取所有文件的预览 URL
+        if (fileIds.length > 0) {
+            try {
+                const previewResults = await batchGetFilePreviewApi({ fileIds });
+                
+                // 构建 fileId -> previewUrl 的映射
+                const previewMap = new Map<number, string>();
+                for (const item of previewResults) {
+                    previewMap.set(item.fileId, item.previewUrl);
+                }
+                // 处理头像
+                if (form.avatar && form.avatar > 0) {
+                    const avatarPreviewUrl = previewMap.get(Number(form.avatar));
+                    if (avatarPreviewUrl) {
+                        fetchedAvatarUrl.value = avatarPreviewUrl;
+                        avatarFile.value = {
+                            fileId: form.avatar,
+                            mediaType: 'image',
+                            url: avatarPreviewUrl,
+                            previewUrl: avatarPreviewUrl,
+                            originalName: 'avatar',
+                            size: 0,
+                            mimeType: 'image/jpeg',
+                            objectKey: '',
+                            coverUrl: '',
+                        };
+                    } else {
+                        fetchedAvatarUrl.value = '';
+                        avatarFile.value = null;
+                    }
+                } else {
+                    fetchedAvatarUrl.value = '';
+                    avatarFile.value = null;
+                }
+                
+                // 处理照片
+                const loadedPhotoFiles: MediaItem[] = [];
+                for (const fileIdStr of baseInfo.value.photoFiles || []) {
+                    const fileId = Number(fileIdStr);
+                    const previewUrl = previewMap.get(fileId);
+                    if (fileId > 0 && previewUrl) {
+                        loadedPhotoFiles.push({
+                            fileId: fileId,
+                            mediaType: 'image',
+                            url: previewUrl,
+                            previewUrl: previewUrl,
+                            originalName: 'photo',
+                            size: 0,
+                            mimeType: 'image/jpeg',
+                            objectKey: '',
+                            coverUrl: '',
+                        });
+                    }
+                }
+                photoFiles.value = loadedPhotoFiles;
+            } catch (e) {
+                console.error('批量获取文件预览失败:', e);
+                fetchedAvatarUrl.value = '';
+                avatarFile.value = null;
+                photoFiles.value = [];
+            }
+        } else {
+            // 没有文件需要加载
+            fetchedAvatarUrl.value = '';
+            avatarFile.value = null;
+            photoFiles.value = [];
+        }
     } finally {
         loading.value = false;
     }
@@ -391,7 +441,7 @@ async function handleSubmit() {
             certificates: splitCsv(certText.value),
             tags: splitCsv(tagText.value),
             introduction: form.introduction || undefined,
-            photos: photoFiles.value.map((x) => x.previewUrl || x.url).filter(Boolean),
+            photos: photoFiles.value.map((x) => x.fileId),
             coachId: coachId.value,
         };
 

@@ -30,6 +30,12 @@ export interface FileCompleteRequest {
     md5?: string;
 }
 
+export interface FileBatchPreviewRequest {
+    fileIds: string[];
+    w?: number;
+    h?: number;
+}
+
 export interface SysFileVO {
     id: number;
     bizType: string;
@@ -72,6 +78,13 @@ export function completeUploadApi(data: FileCompleteRequest) {
 
 export function getFileDetailApi(fileId: number) {
     return requestClient.get<SysFileVO>(`/api/file/${fileId}`);
+}
+
+export function batchGetFilePreviewApi(data: FileBatchPreviewRequest) {
+    return requestClient.post<{ fileId: number; previewUrl: string; thumbUrl: string; expireAt: number }[]>(
+        '/api/file/batch-preview',
+        data,
+    );
 }
 
 export function getFilePreviewApi(fileId: number, w?: number, h?: number) {

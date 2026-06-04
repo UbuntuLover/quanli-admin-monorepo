@@ -15,6 +15,7 @@ export interface CoachVO {
     introduction?: string | null;
     certifications?: string[] | null;
     tags?: string[] | null;
+    photoFiles?: string[] | null;
 }
 
 export interface CoachProfileVO {
