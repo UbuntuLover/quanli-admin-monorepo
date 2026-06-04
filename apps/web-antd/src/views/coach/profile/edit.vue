@@ -30,7 +30,9 @@
                                     class="coach-avatar-preview"
                                     @click="openAvatarPicker"
                                 />
-                                <div v-else class="avatar-char" :style="{ backgroundColor: getAvatarColor(baseInfo?.name) }" @click="openAvatarPicker">
+                                <div v-else class="avatar-char"
+                                     :style="{ backgroundColor: getAvatarColor(baseInfo?.name) }"
+                                     @click="openAvatarPicker">
                                     {{ getAvatarChar(baseInfo?.name) }}
                                 </div>
                             </div>
@@ -130,6 +132,7 @@ import {
     Textarea as ATextarea,
     message,
 } from 'ant-design-vue';
+import {getFilePreviewApi} from "#/api/file";
 
 defineOptions({name: 'CoachProfileEdit'});
 
@@ -147,7 +150,7 @@ const baseInfo = ref<CoachVO | null>(null);
 const form = reactive({
     phone: '',
     smsCode: '',
-    avatar: '',
+    avatar: -1,
     introduction: '',
 });
 
@@ -160,6 +163,9 @@ const avatarInputRef = ref<HTMLInputElement | null>(null);
 /** 上传模型 */
 const avatarFile = ref<MediaItem | null>(null);
 const photoFiles = ref<MediaItem[]>([]);
+
+/** 从 API 获取的头像预览 URL */
+const fetchedAvatarUrl = ref<string>('');
 
 // 橙黄色系头像颜色
 const avatarColors = [
@@ -196,7 +202,7 @@ const mockCoachList: CoachVO[] = [
     {
         id: 101,
         name: '张伟',
-        avatar: '',
+        avatar: -1,
         specialties: ['增肌训练', '力量训练'],
         venues: [{id: 1, name: '南山旗舰店'}],
         isAvailable: true,
@@ -206,7 +212,7 @@ const mockCoachList: CoachVO[] = [
     {
         id: 102,
         name: '李娜',
-        avatar: '',
+        avatar: -1,
         specialties: ['瑜伽', '普拉提'],
         venues: [{id: 3, name: '罗湖店'}],
         isAvailable: false,
@@ -215,9 +221,13 @@ const mockCoachList: CoachVO[] = [
     },
 ];
 
-const avatarPreview = computed(
-    () => avatarFile.value?.previewUrl?.trim() || avatarFile.value?.url?.trim() || form.avatar?.trim() || baseInfo.value?.avatar?.trim() || '',
-);
+const avatarPreview = computed(() => {
+    // 优先级：新上传的头像 > 从 API 获取的头像 > 空
+    return avatarFile.value?.previewUrl?.trim() 
+        || avatarFile.value?.url?.trim() 
+        || fetchedAvatarUrl.value 
+        || '';
+});
 
 function splitCsv(text: string) {
     return (text || '')
@@ -303,7 +313,8 @@ async function onAvatarFileChange(e: Event) {
             coverUrl: '',
         };
 
-        form.avatar = uploaded.previewUrl || uploaded.url;
+        // 这里不要存previewUrl，因为previewUrl是临时的
+        form.avatar = uploaded.id
         message.success('头像上传成功');
     } catch (e: any) {
         console.error(e);
@@ -324,25 +335,39 @@ async function fetchDetailByListFallback() {
             return;
         }
 
-        form.avatar = baseInfo.value.avatar || '';
+        // 这里的avatar是fileId
+        form.avatar = baseInfo.value.avatar || -1;
         form.introduction = baseInfo.value.introduction || '';
         certText.value = (baseInfo.value.certifications || []).join(', ');
         tagText.value = (baseInfo.value.tags || []).join(', ');
 
-               // 编辑态回填头像（如果有）
-        avatarFile.value = form.avatar
-            ? {
-                fileId: -1,
-                mediaType: 'image',
-                url: form.avatar,
-                previewUrl: form.avatar,
-                originalName: 'avatar',
-                size: 0,
-                mimeType: 'image/jpeg',
-                objectKey: '',
-                coverUrl: '',
+        // 编辑态回填头像（如果有）
+        if (form.avatar && form.avatar > 0) {
+            try {
+                // 调用真实接口获取预览 URL
+                const previewRes = await getFilePreviewApi(form.avatar);
+                fetchedAvatarUrl.value = previewRes.previewUrl;
+                avatarFile.value = {
+                    fileId: form.avatar,
+                    mediaType: 'image',
+                    url: previewRes.previewUrl,
+                    previewUrl: previewRes.previewUrl,
+                    originalName: 'avatar',
+                    size: 0,
+                    mimeType: 'image/jpeg',
+                    objectKey: '',
+                    coverUrl: '',
+                };
+            } catch (e) {
+                console.error('获取头像预览失败:', e);
+                fetchedAvatarUrl.value = '';
+                avatarFile.value = null;
             }
-            : null;
+        } else {
+            fetchedAvatarUrl.value = '';
+            avatarFile.value = null;
+        }
+
 
         // 你的 list 接口暂无 photos 字段，先保持空
         photoFiles.value = [];
@@ -362,7 +387,7 @@ async function handleSubmit() {
         const payload = {
             phone: form.phone || undefined,
             smsCode: form.smsCode || undefined,
-            avatar: avatarFile.value?.previewUrl || avatarFile.value?.url || form.avatar || undefined,
+            avatar: avatarFile.value?.fileId || form.avatar || undefined,
             certificates: splitCsv(certText.value),
             tags: splitCsv(tagText.value),
             introduction: form.introduction || undefined,

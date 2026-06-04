@@ -8,12 +8,13 @@ export interface CoachVenueVO {
 export interface CoachVO {
     id: number;
     name: string;
-    avatar?: string | null;
+    avatar?: number | null;
     specialties?: string[] | null;
     venues: CoachVenueVO[];
     isAvailable: boolean;
     introduction?: string | null;
     certifications?: string[] | null;
+    tags?: string[] | null;
 }
 
 export interface CoachProfileVO {
