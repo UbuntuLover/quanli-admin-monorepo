@@ -29,6 +29,7 @@ import {
     type VenueUpdateRequest,
 } from '#/api/venue/create';
 import type { MediaItem } from '#/components/upload';
+import { batchGetFilePreviewApi } from '#/api/file';
 
 defineOptions({ name: 'VenueEdit' });
 
@@ -100,16 +101,16 @@ const form = reactive({
     areaSqm: null as number | null,
     capacity: null as number | null,
     facilities: [] as string[],
-    photos: [] as string[],
-    videos: [] as string[],
+    photos: [] as number[],
+    videos: [] as number[],
     description: '',
     businessHours: createDefaultBusinessHours(),
     businessStatus: 1,
     closedDates: [] as string[],
     notice: '',
     tags: [] as string[],
-    logo: '',
-    backgroundImage: '',
+    logo: -1,
+    backgroundImage: -1,
     status: 1,
 });
 
@@ -129,36 +130,96 @@ function initFormFromDetail(data: VenueDetailForAdminDTO) {
     form.areaSqm = data.areaSqm ?? null;
     form.capacity = data.capacity ?? null;
     form.facilities = data.facilities || [];
-    form.photos = data.photos || [];
-    form.videos = data.videos || [];
     form.description = data.description || '';
     form.businessHours = createBusinessHoursFromData(data);
     form.businessStatus = data.businessStatus || 1;
     form.closedDates = data.closedDates || [];
     form.notice = data.notice || '';
     form.tags = data.tags || [];
-    form.logo = data.logo || '';
-    form.backgroundImage = data.backgroundImage || '';
     form.status = data.status || 1;
 
-    // 初始化已上传的文件
-    if (data.logo) {
-        logoFile.value = createMediaItemFromUrl(data.logo, 'image');
-    }
-    if (data.backgroundImage) {
-        backgroundImageFile.value = createMediaItemFromUrl(data.backgroundImage, 'image');
-    }
-    photoFiles.value = (data.photos || []).map((url) => createMediaItemFromUrl(url, 'image'));
-    videoFiles.value = (data.videos || []).map((url) => createMediaItemFromUrl(url, 'video'));
+    // 初始化 fileId（数字类型）
+    form.logo = data.logo ? Number(data.logo) : -1;
+    form.backgroundImage = data.backgroundImage ? Number(data.backgroundImage) : -1;
+    form.photos = ((data.photos || []) as string[]).map((id) => Number(id)).filter((id) => id > 0);
+    form.videos = ((data.videos || []) as string[]).map((id) => Number(id)).filter((id) => id > 0);
 }
 
-function createMediaItemFromUrl(url: string, mediaType: 'image' | 'video'): MediaItem {
+async function loadMediaPreviews() {
+    // 收集所有需要获取预览的文件 ID
+    const fileIds: string[] = [];
+    
+    if (form.logo && form.logo > 0) {
+        fileIds.push(String(form.logo));
+    }
+    if (form.backgroundImage && form.backgroundImage > 0) {
+        fileIds.push(String(form.backgroundImage));
+    }
+    form.photos.forEach((id) => {
+        if (id > 0) {
+            fileIds.push(String(id));
+        }
+    });
+    form.videos.forEach((id) => {
+        if (id > 0) {
+            fileIds.push(String(id));
+        }
+    });
+
+    if (fileIds.length > 0) {
+        try {
+            const previewResults = await batchGetFilePreviewApi({ fileIds });
+            const previewMap = new Map<number, string>();
+            for (const item of previewResults) {
+                previewMap.set(item.fileId, item.previewUrl);
+            }
+
+            // 设置 logo
+            if (form.logo && form.logo > 0) {
+                const previewUrl = previewMap.get(form.logo);
+                if (previewUrl) {
+                    logoFile.value = createMediaItem(form.logo, previewUrl, 'image');
+                }
+            }
+
+            // 设置背景图
+            if (form.backgroundImage && form.backgroundImage > 0) {
+                const previewUrl = previewMap.get(form.backgroundImage);
+                if (previewUrl) {
+                    backgroundImageFile.value = createMediaItem(form.backgroundImage, previewUrl, 'image');
+                }
+            }
+
+            // 设置照片
+            photoFiles.value = form.photos
+                .filter((id) => id > 0)
+                .map((id) => {
+                    const previewUrl = previewMap.get(id);
+                    return previewUrl ? createMediaItem(id, previewUrl, 'image') : null;
+                })
+                .filter((item): item is MediaItem => item !== null);
+
+            // 设置视频
+            videoFiles.value = form.videos
+                .filter((id) => id > 0)
+                .map((id) => {
+                    const previewUrl = previewMap.get(id);
+                    return previewUrl ? createMediaItem(id, previewUrl, 'video') : null;
+                })
+                .filter((item): item is MediaItem => item !== null);
+        } catch (e) {
+            console.error('批量获取文件预览失败:', e);
+        }
+    }
+}
+
+function createMediaItem(fileId: number, previewUrl: string, mediaType: 'image' | 'video'): MediaItem {
     return {
-        fileId: Date.now() + Math.random(),
+        fileId,
         mediaType,
-        url,
-        previewUrl: url,
-        originalName: url.split('/').pop() || 'file',
+        url: previewUrl,
+        previewUrl,
+        originalName: `file-${fileId}`,
         size: 0,
         objectKey: '',
     };
@@ -169,6 +230,7 @@ async function loadVenueDetail(id: number) {
     try {
         const data = await getVenueDetailForAdminApi(id);
         initFormFromDetail(data);
+        await loadMediaPreviews();
     } catch (e: any) {
         message.error(e?.message || '加载场馆详情失败');
         router.push({ name: 'VenueList' });
@@ -180,7 +242,7 @@ async function loadVenueDetail(id: number) {
 watch(
     logoFile,
     (val) => {
-        form.logo = val?.previewUrl || val?.url || '';
+        form.logo = val?.fileId;
     },
     { immediate: true },
 );
@@ -188,7 +250,7 @@ watch(
 watch(
     backgroundImageFile,
     (val) => {
-        form.backgroundImage = val?.previewUrl || val?.url || '';
+        form.backgroundImage = val?.fileId;
     },
     { immediate: true },
 );
@@ -196,7 +258,7 @@ watch(
 watch(
     photoFiles,
     (val) => {
-        form.photos = (val || []).map((item) => item.previewUrl || item.url).filter(Boolean);
+        form.photos = (val || []).map((item) => item.fileId).filter((id) => id > 0);
     },
     { immediate: true, deep: true },
 );
@@ -204,7 +266,7 @@ watch(
 watch(
     videoFiles,
     (val) => {
-        form.videos = (val || []).map((item) => item.previewUrl || item.url).filter(Boolean);
+        form.videos = (val || []).map((item) => item.fileId).filter((id) => id > 0);
     },
     { immediate: true, deep: true },
 );
@@ -234,16 +296,16 @@ function normalizePayload(): VenueUpdateRequest {
         areaSqm: form.areaSqm ?? null,
         capacity: form.capacity ?? null,
         facilities: form.facilities?.length ? form.facilities.map((v) => v.trim()).filter(Boolean) : null,
-        photos: form.photos?.length ? form.photos.map((v) => v.trim()).filter(Boolean) : null,
-        videos: form.videos?.length ? form.videos.map((v) => v.trim()).filter(Boolean) : null,
+        photos: form.photos?.length ? form.photos : null,
+        videos: form.videos?.length ? form.videos : null,
         description: form.description?.trim() || null,
         businessHours: normalizedBusinessHours,
         businessStatus: form.businessStatus,
         closedDates: form.closedDates?.length ? form.closedDates : null,
         notice: form.notice?.trim() || null,
         tags: form.tags?.length ? form.tags.map((v) => v.trim()).filter(Boolean) : null,
-        logo: form.logo?.trim() || null,
-        backgroundImage: form.backgroundImage?.trim() || null,
+        logo: form.logo && form.logo > 0 ? form.logo : null,
+        backgroundImage: form.backgroundImage && form.backgroundImage > 0 ? form.backgroundImage : null,
         status: form.status,
     };
 }
