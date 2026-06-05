@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
-import type { UploadFile } from 'ant-design-vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 import {
     Button as AButton,
     Card as ACard,
@@ -20,10 +19,10 @@ import {
 
 import MediaUpload from '#/components/upload/media-upload.vue';
 
-import { createProductApi } from '#/api/products/product';
-import { getLeafCategoriesApi } from '#/api/products/productCategory';
-import { getAllProductBrandsApi, type ProductBrandDTO } from '#/api/products/productBrand';
-import type { CategoryDTO } from '#/types/category';
+import {createProductApi} from '#/api/products/product';
+import {getLeafCategoriesApi} from '#/api/products/productCategory';
+import {getAllProductBrandsApi, type ProductBrandDTO} from '#/api/products/productBrand';
+import type {CategoryDTO} from '#/types/category';
 
 type CreateProductSkuRequest = {
     skuCode?: string;
@@ -43,12 +42,12 @@ type CreateProductRequest = {
     description?: string | null;
     isNew?: number;
     isHot?: number;
-    mainImage?: string | null;
-    videoUrl?: string | null;
+    mainImage?: number | null;
+    videoUrl?: number | null;
     productType?: 'PHYSICAL';
     deliveryMode?: null;
     benefitType?: null;
-    images?: string[] | null;
+    images?: number[] | null;
     skus: CreateProductSkuRequest[];
 };
 
@@ -82,9 +81,9 @@ const form = reactive({
     description: '',
     isNew: false,
     isHot: false,
-    mainImage: '',
-    videoUrl: '',
-    images: [] as string[],
+    mainImage: 0,  // 修改：存储 fileId（number）
+    videoUrl: 0,   // 修改：存储 fileId（number）
+    images: [] as number[],  // 修改：存储 fileId 数组
 });
 
 // 使用 MediaUpload 组件的数据
@@ -94,11 +93,6 @@ const videoData = ref<MediaItem | null>(null);
 
 const leafCategoryOptions = ref<Array<{ label: string; value: string }>>([]);
 const brandOptions = ref<BrandOption[]>([]);
-
-// 从 MediaItem 提取预览 URL
-const mainImageUrl = computed(() => mainImageData.value?.previewUrl || '');
-const videoPreviewUrl = computed(() => videoData.value?.previewUrl || '');
-const galleryUrls = computed(() => galleryImagesData.value.map(item => item.previewUrl));
 
 const skus = ref<
     Array<{
@@ -152,19 +146,19 @@ function parseAttrs(text: string): Record<string, string> {
 // 主图变化处理
 function handleMainImageChange(value: MediaItem | null) {
     mainImageData.value = value;
-    form.mainImage = value?.previewUrl || '';
+    form.mainImage = value?.fileId || 0;  // 修改：存储 fileId
 }
 
 // 轮播图变化处理
 function handleGalleryChange(value: MediaItem[]) {
     galleryImagesData.value = value;
-    form.images = value.map(item => item.previewUrl);
+    form.images = value.map(item => item.fileId);  // 修改：存储 fileId 数组
 }
 
 // 视频变化处理
 function handleVideoChange(value: MediaItem | null) {
     videoData.value = value;
-    form.videoUrl = value?.previewUrl || '';
+    form.videoUrl = value?.fileId || 0;  // 修改：存储 fileId
 }
 
 async function loadLeafCategories() {
@@ -224,7 +218,7 @@ async function submit() {
         if (!form.categoryId) throw new Error('请选择第三级分类');
         if (!form.brandId) throw new Error('请选择品牌');
         if (!skus.value.length) throw new Error('请至少添加一个 SKU');
-        if (!form.mainImage) throw new Error('请上传主图');
+        if (!form.mainImage || form.mainImage <= 0) throw new Error('请上传主图');  // 修改：检查 fileId
 
         const normalizedSkus: CreateProductSkuRequest[] = skus.value.map((s, idx) => {
             if ((s.priceYuan ?? 0) <= 0) throw new Error(`第 ${idx + 1} 个SKU价格必须大于0`);
@@ -252,12 +246,12 @@ async function submit() {
             description: form.description || null,
             isNew: form.isNew ? 1 : 0,
             isHot: form.isHot ? 1 : 0,
-            mainImage: form.mainImage || null,
-            videoUrl: form.videoUrl || null,
+            mainImage: form.mainImage && form.mainImage > 0 ? form.mainImage : null,  // 修改：提交 fileId
+            videoUrl: form.videoUrl && form.videoUrl > 0 ? form.videoUrl : null,       // 修改：提交 fileId
             productType: 'PHYSICAL',
             deliveryMode: null,
             benefitType: null,
-            images: form.images?.length ? form.images : null,
+            images: form.images?.length && form.images.some(id => id > 0) ? form.images : null,  // 修改：提交 fileId 数组
             skus: normalizedSkus,
         };
 
@@ -287,7 +281,7 @@ onMounted(async () => {
                 <a-row :gutter="16">
                     <a-col :span="12">
                         <a-form-item label="商品名称" required>
-                            <a-input v-model:value="form.name" :maxlength="100" placeholder="请输入商品名称" />
+                            <a-input v-model:value="form.name" :maxlength="100" placeholder="请输入商品名称"/>
                         </a-form-item>
                     </a-col>
 
@@ -321,28 +315,28 @@ onMounted(async () => {
                 <a-row :gutter="16">
                     <a-col :span="12">
                         <a-form-item label="副标题">
-                            <a-input v-model:value="form.subtitle" :maxlength="120" />
+                            <a-input v-model:value="form.subtitle" :maxlength="120"/>
                         </a-form-item>
                     </a-col>
                     <a-col :span="3">
                         <a-form-item label="新品">
-                            <a-switch v-model:checked="form.isNew" />
+                            <a-switch v-model:checked="form.isNew"/>
                         </a-form-item>
                     </a-col>
                     <a-col :span="3">
                         <a-form-item label="热销">
-                            <a-switch v-model:checked="form.isHot" />
+                            <a-switch v-model:checked="form.isHot"/>
                         </a-form-item>
                     </a-col>
                     <a-col :span="6">
                         <a-form-item label="商品类型">
-                            <a-input value="实体商品（PHYSICAL）" disabled />
+                            <a-input value="实体商品（PHYSICAL）" disabled/>
                         </a-form-item>
                     </a-col>
                 </a-row>
 
                 <a-form-item label="商品描述">
-                    <a-input-textarea v-model:value="form.description" :rows="4" :maxlength="2000" />
+                    <a-input-textarea v-model:value="form.description" :rows="4" :maxlength="2000"/>
                 </a-form-item>
 
                 <a-row :gutter="16">
@@ -355,7 +349,7 @@ onMounted(async () => {
                                     :multiple="false"
                                     :max-count="1"
                                     :accept-config="{ image: true, video: false }"
-                                    @change="handleMainImageChange"
+                                    :change="handleMainImageChange"
                                 />
                             </div>
                         </a-form-item>
@@ -370,7 +364,7 @@ onMounted(async () => {
                                     :multiple="true"
                                     :max-count="20"
                                     :accept-config="{ image: true, video: false }"
-                                    @change="handleGalleryChange"
+                                    :change="handleGalleryChange"
                                 />
                             </div>
                         </a-form-item>
@@ -385,7 +379,7 @@ onMounted(async () => {
                                     :multiple="false"
                                     :max-count="1"
                                     :accept-config="{ image: false, video: true }"
-                                    @change="handleVideoChange"
+                                    :change="handleVideoChange"
                                 />
                             </div>
                         </a-form-item>
@@ -402,17 +396,18 @@ onMounted(async () => {
                     <a-row :gutter="12">
                         <a-col :span="6">
                             <a-form-item :label="`SKU名称 #${idx + 1}`">
-                                <a-input v-model:value="sku.name" placeholder="如：黑色L码" />
+                                <a-input v-model:value="sku.name" placeholder="如：黑色L码"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="4">
                             <a-form-item label="SKU编码">
-                                <a-input v-model:value="sku.skuCode" />
+                                <a-input v-model:value="sku.skuCode"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="4">
                             <a-form-item label="价格(元)" required>
-                                <a-input-number v-model:value="sku.priceYuan" :min="0" :precision="2" style="width: 100%" />
+                                <a-input-number v-model:value="sku.priceYuan" :min="0" :precision="2"
+                                                style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="4">
@@ -427,7 +422,7 @@ onMounted(async () => {
                         </a-col>
                         <a-col :span="3">
                             <a-form-item label="库存">
-                                <a-input-number v-model:value="sku.stock" :min="0" :precision="0" style="width: 100%" />
+                                <a-input-number v-model:value="sku.stock" :min="0" :precision="0" style="width: 100%"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="3" style="display: flex; align-items: center; justify-content: flex-end">
@@ -438,12 +433,12 @@ onMounted(async () => {
                     <a-row :gutter="12">
                         <a-col :span="12">
                             <a-form-item label="属性（格式：颜色:黑;尺码:L）">
-                                <a-input v-model:value="sku.attrsText" placeholder="颜色:黑;尺码:L" />
+                                <a-input v-model:value="sku.attrsText" placeholder="颜色:黑;尺码:L"/>
                             </a-form-item>
                         </a-col>
                         <a-col :span="12">
                             <a-form-item label="SKU图片URL（可选）">
-                                <a-input v-model:value="sku.image" placeholder="可填上传后的图片链接" />
+                                <a-input v-model:value="sku.image" placeholder="可填上传后的图片链接"/>
                             </a-form-item>
                         </a-col>
                     </a-row>

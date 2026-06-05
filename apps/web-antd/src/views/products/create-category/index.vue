@@ -161,7 +161,7 @@ const beforeIconUpload: UploadProps['beforeUpload'] = async (raw) => {
             },
         });
 
-        form.icon = saved.url;
+        form.icon = String(saved.id);  // 修改：存储 fileId（转为 string）
         iconFileList.value = [
             {
                 uid: String(saved.id),

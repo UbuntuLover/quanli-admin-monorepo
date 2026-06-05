@@ -172,10 +172,10 @@
                         <div class="product-cell">
                             <a-image
                                 class="product-image"
-                                :src="record.mainImage || fallbackImage"
+                                :src="getMainImagePreview(record.mainImage)"
                                 :width="64"
                                 :height="64"
-                                :preview="!!record.mainImage"
+                                :preview="!!getMainImagePreview(record.mainImage) && getMainImagePreview(record.mainImage) !== fallbackImage"
                             />
 
                             <div class="product-info">
@@ -315,6 +315,8 @@ import {
 
 import { getCategoryTreeApi } from '#/api/products/productCategory';
 
+import { batchGetFilePreviewApi } from '#/api/file';
+
 import type { CascaderOption, CategoryDTO } from '#/types/category';
 import type { ProductListDTO, ProductQueryDTO } from '#/types/product';
 
@@ -326,6 +328,9 @@ const fallbackImage =
 const loading = ref(false);
 const productList = ref<ProductListDTO[]>([]);
 const total = ref(0);
+
+// 存储 mainImage fileId -> previewUrl 的映射
+const mainImagePreviewMap = ref<Map<string, string>>(new Map());
 
 const categoryTree = ref<CategoryDTO[]>([]);
 const categoryPath = ref<number[]>([]);
@@ -423,9 +428,44 @@ async function fetchProductList() {
         total.value = res.total || 0;
         queryForm.page = res.page || queryForm.page;
         queryForm.pageSize = res.pageSize || queryForm.pageSize;
+        
+        // 批量获取主图预览 URL
+        await loadMainImagePreviews();
     } finally {
         loading.value = false;
     }
+}
+
+// 批量加载商品主图预览 URL
+async function loadMainImagePreviews() {
+    // 清空旧的映射
+    mainImagePreviewMap.value.clear();
+    
+    // 收集所有需要获取预览的 mainImage fileId
+    const mainImageIds = productList.value
+        .filter((item) => item.mainImage && Number(item.mainImage) > 0)
+        .map((item) => item.mainImage!);
+    
+    if (mainImageIds.length === 0) return;
+    
+    try {
+        const previewResults = await batchGetFilePreviewApi({ fileIds: mainImageIds });
+        
+        for (const item of previewResults) {
+            mainImagePreviewMap.value.set(String(item.fileId), item.previewUrl);
+        }
+    } catch (e) {
+        console.error('批量获取商品主图预览失败:', e);
+    }
+}
+
+// 获取商品主图预览 URL
+function getMainImagePreview(mainImage?: string): string {
+    if (!mainImage) return fallbackImage;
+    
+    // 否则从映射中获取预览 URL
+    const previewUrl = mainImagePreviewMap.value.get(mainImage);
+    return previewUrl || fallbackImage;
 }
 
 async function fetchCategoryTree() {

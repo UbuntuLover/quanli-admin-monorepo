@@ -22,26 +22,27 @@
                 <a-form ref="formRef" :model="formState" layout="vertical">
                     <a-row :gutter="16">
                         <a-col :xs="24" :md="12">
-                            <a-form-item label="商品名称" name="name" :rules="[{ required: true, message: '请输入商品名称' }]">
-                                <a-input v-model:value="formState.name" placeholder="请输入商品名称" />
+                            <a-form-item label="商品名称" name="name"
+                                         :rules="[{ required: true, message: '请输入商品名称' }]">
+                                <a-input v-model:value="formState.name" placeholder="请输入商品名称"/>
                             </a-form-item>
                         </a-col>
 
                         <a-col :xs="24" :md="12">
                             <a-form-item label="分类（只读）">
-                                <a-input :value="categoryDisplayText" readonly />
+                                <a-input :value="categoryDisplayText" readonly/>
                             </a-form-item>
                         </a-col>
 
                         <a-col :xs="24" :md="12">
                             <a-form-item label="品牌ID（只读）">
-                                <a-input :value="brandIdDisplayText" disabled />
+                                <a-input :value="brandIdDisplayText" disabled/>
                             </a-form-item>
                         </a-col>
 
                         <a-col :xs="24" :md="12">
                             <a-form-item label="权益类型（只读）">
-                                <a-input :value="benefitTypeDisplayText" readonly />
+                                <a-input :value="benefitTypeDisplayText" readonly/>
                             </a-form-item>
                         </a-col>
 
@@ -57,13 +58,14 @@
 
                         <a-col :xs="24">
                             <a-form-item label="副标题" name="subtitle">
-                                <a-input v-model:value="formState.subtitle" placeholder="请输入副标题" />
+                                <a-input v-model:value="formState.subtitle" placeholder="请输入副标题"/>
                             </a-form-item>
                         </a-col>
 
                         <a-col :xs="24">
                             <a-form-item label="商品描述" name="description">
-                                <a-textarea v-model:value="formState.description" :rows="5" placeholder="请输入商品描述" />
+                                <a-textarea v-model:value="formState.description" :rows="5"
+                                            placeholder="请输入商品描述"/>
                             </a-form-item>
                         </a-col>
 
@@ -73,8 +75,8 @@
                                 <div class="main-image-wrap">
                                     <div class="main-image-static">
                                         <a-image
-                                            :src="mainImageThumb || fallbackImage"
-                                            :preview="mainImagePreview ? { src: mainImagePreview } : false"
+                                            :src="getPreviewUrl(mainImageFile?.fileId) || fallbackImage"
+                                            :preview="mainImageFile?.fileId ? { src: getPreviewUrl(mainImageFile.fileId) } : false"
                                             class="main-image"
                                         />
                                     </div>
@@ -111,21 +113,25 @@
                                         <template #item="{ element, index }">
                                             <div class="img-card">
                                                 <div class="drag-handle" title="拖拽排序">☰</div>
-                                                <div v-if="isCurrentMainImage(element)" class="main-badge">当前主图</div>
+                                                <div v-if="isCurrentMainImage(element)" class="main-badge">当前主图
+                                                </div>
 
                                                 <img
                                                     class="img-card__img"
-                                                    :src="resolveThumbUrlStrict(element) || fallbackImage"
+                                                    :src="getPreviewUrl(element.fileId) || fallbackImage"
                                                     :alt="element.name || `图片${index + 1}`"
                                                     @click="handlePreview(element)"
                                                 />
 
                                                 <div class="img-card__actions">
-                                                    <a-button size="small" @click="handlePreview(element)">预览</a-button>
-                                                    <a-button size="small" @click="setAsMainImage(index)" :disabled="isCurrentMainImage(element)">
+                                                    <a-button size="small" @click="handlePreview(element)">预览
+                                                    </a-button>
+                                                    <a-button size="small" @click="setAsMainImage(index)"
+                                                              :disabled="isCurrentMainImage(element)">
                                                         设为主图
                                                     </a-button>
-                                                    <a-button size="small" danger @click="removeImageAt(index)">删除</a-button>
+                                                    <a-button size="small" danger @click="removeImageAt(index)">删除
+                                                    </a-button>
                                                 </div>
                                             </div>
                                         </template>
@@ -140,9 +146,12 @@
                                         :custom-request="handleImageCustomRequest"
                                     >
                                         <div class="upload-trigger">
-                                            <PlusOutlined />
+                                            <PlusOutlined/>
                                             <div style="margin-top: 8px">上传</div>
-                                            <div class="upload-trigger__hint">{{ imagesFileList.length }}/{{ MAX_IMAGES }}</div>
+                                            <div class="upload-trigger__hint">{{ imagesFileList.length }}/{{
+                                                    MAX_IMAGES
+                                                }}
+                                            </div>
                                         </div>
                                     </a-upload>
                                 </div>
@@ -151,15 +160,16 @@
                                     预览仅使用后端返回的签名 previewUrl/thumbUrl；若未拿到签名，将显示占位图并提示。
                                 </div>
 
-                                <a-modal :open="previewVisible" :title="previewTitle" :footer="null" @cancel="previewVisible = false" destroy-on-close>
-                                    <img alt="preview" style="width: 100%" :src="previewImage || fallbackImage" />
+                                <a-modal :open="previewVisible" :title="previewTitle" :footer="null"
+                                         @cancel="previewVisible = false" destroy-on-close>
+                                    <img alt="preview" style="width: 100%" :src="previewImage || fallbackImage"/>
                                 </a-modal>
                             </a-form-item>
                         </a-col>
 
                         <a-col :xs="24">
                             <a-form-item label="视频URL" name="videoUrl">
-                                <a-input v-model:value="formState.videoUrl" placeholder="https://..." />
+                                <a-input v-model:value="formState.videoUrl" placeholder="https://..."/>
                             </a-form-item>
                         </a-col>
 
@@ -195,13 +205,13 @@
 </template>
 
 <script setup lang="ts">
-import type { FormInstance, UploadFile, UploadProps } from 'ant-design-vue';
-import type { UpdateProductRequest } from '#/types/product';
+import type {FormInstance, UploadFile, UploadProps} from 'ant-design-vue';
+import type {UpdateProductRequest} from '#/types/product';
 
-import { computed, onMounted, reactive, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import {computed, onMounted, reactive, ref} from 'vue';
+import {useRoute, useRouter} from 'vue-router';
 import draggable from 'vuedraggable';
-import { PlusOutlined } from '@ant-design/icons-vue';
+import {PlusOutlined} from '@ant-design/icons-vue';
 import {
     Button as AButton,
     Card as ACard,
@@ -220,9 +230,9 @@ import {
     Image as AImage,
 } from 'ant-design-vue';
 
-import { getProductDetailApi, updateProductApi } from '#/api/products/product';
-import { uploadToOss } from '#/services/upload/oss-upload';
-import { deleteFileApi, getFilePreviewApi } from '#/api/file';
+import {getProductDetailApi, updateProductApi} from '#/api/products/product';
+import {uploadToOss} from '#/services/upload/oss-upload';
+import {deleteFileApi, getFilePreviewApi, batchGetFilePreviewApi} from '#/api/file';
 
 const AFormItem = AForm.Item;
 const ASelectOption = ASelect.Option;
@@ -241,17 +251,22 @@ const loading = ref(false);
 const submitting = ref(false);
 const productId = computed(() => String(route.params.id ?? ''));
 
-const categoryInfo = reactive({ id: '', name: '' });
+const categoryInfo = reactive({id: '', name: ''});
 const benefitType = ref('');
 
 const categoryDisplayText = computed(() => `${categoryInfo.name || '-'}（ID: ${categoryInfo.id || '-'}）`);
 const benefitTypeDisplayText = computed(() => {
     switch ((benefitType.value || '').toUpperCase()) {
-        case 'PACKAGE': return '权益卡';
-        case 'COUPON': return '优惠券';
-        case 'BALANCE': return '账户余额';
-        case 'MIXED': return '组合卡';
-        default: return benefitType.value || '-';
+        case 'PACKAGE':
+            return '权益卡';
+        case 'COUPON':
+            return '优惠券';
+        case 'BALANCE':
+            return '账户余额';
+        case 'MIXED':
+            return '组合卡';
+        default:
+            return benefitType.value || '-';
     }
 });
 
@@ -297,15 +312,42 @@ type CacheMap = Record<string, CacheItem>;
 let cache: CacheMap = loadCache();
 const inflight = new Map<string, Promise<CacheItem>>();
 
+// fileId -> previewUrl 映射（用于显示）
+const filePreviewMap = ref<Map<number, string>>(new Map());
+
 onMounted(fetchDetail);
+
+// 批量加载文件预览 URL
+async function loadFilePreviews(fileIds: number[]) {
+    if (fileIds.length === 0) return;
+
+    filePreviewMap.value.clear();
+
+    try {
+        const previewResults = await batchGetFilePreviewApi({fileIds: fileIds.map(String)});
+        for (const item of previewResults) {
+            filePreviewMap.value.set(item.fileId, item.previewUrl);
+        }
+    } catch (e) {
+        console.error('批量获取文件预览失败:', e);
+    }
+}
+
+// 根据 fileId 获取预览 URL
+function getPreviewUrl(fileId?: number): string {
+    if (!fileId || fileId <= 0) return fallbackImage;
+    return filePreviewMap.value.get(fileId) || fallbackImage;
+}
 
 function normalizeNullableString(val: unknown) {
     const s = String(val ?? '').trim().toLowerCase();
     return !s || s === 'null' || s === 'undefined' ? '' : String(val).trim();
 }
+
 function normalizeUrl(url?: string) {
     return String(url ?? '').trim().replace(/\s+/g, '');
 }
+
 function loadCache(): CacheMap {
     try {
         const raw = sessionStorage.getItem(CACHE_KEY);
@@ -320,9 +362,14 @@ function loadCache(): CacheMap {
         return {};
     }
 }
+
 function saveCache() {
-    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch {}
+    try {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    } catch {
+    }
 }
+
 function parseFileIdFromUrl(url: string): number | null {
     const u = normalizeUrl(url);
     if (!u) return null;
@@ -334,22 +381,20 @@ function parseFileIdFromUrl(url: string): number | null {
     if (mTail) return Number(mTail[1]);
     return null;
 }
+
 function isValidImage(file: File) {
     return ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
 }
+
 function pickUploadedFileId(uploaded: any): number | undefined {
     const id =
-        uploaded?.id ??
-        uploaded?.fileId ??
-        uploaded?.data?.id ??
-        uploaded?.data?.fileId ??
-        uploaded?.result?.id ??
-        uploaded?.result?.fileId;
+        uploaded?.id
     const n = Number(id);
     return Number.isFinite(n) && n > 0 ? n : undefined;
 }
+
 function pickUploadedUrl(uploaded: any): string {
-    return String(uploaded?.url ?? uploaded?.data?.url ?? uploaded?.result?.url ?? '').trim();
+    return String(uploaded?.previewUrl).trim();
 }
 
 async function getSignedPair(fileId: number, w: number, h: number): Promise<CacheItem> {
@@ -397,16 +442,6 @@ async function enrichImageSigned(file: EnhancedUploadFile, w = 120, h = 120): Pr
     }
 }
 
-/** 严格：只返回签名图，不回退裸链 */
-function resolveThumbUrlStrict(file: EnhancedUploadFile): string {
-    const resp = (file.response || {}) as any;
-    return String(file.thumbUrlSigned || resp.thumbUrl || '').trim();
-}
-/** 严格：只返回签名图，不回退裸链 */
-function resolvePreviewUrlStrict(file: EnhancedUploadFile): string {
-    const resp = (file.response || {}) as any;
-    return String(file.previewUrl || resp.previewUrl || '').trim();
-}
 
 function triggerMainImageUpload() {
     const input = mainUploadRef.value?.$el?.querySelector?.('input[type="file"]') as HTMLInputElement | null;
@@ -415,15 +450,18 @@ function triggerMainImageUpload() {
 
 async function refreshMainImageView() {
     const source = mainImageFile.value;
-    if (!source) {
+    if (!source || !source.fileId) {
         mainImagePreview.value = '';
         mainImageThumb.value = '';
         formState.mainImage = '';
         return;
     }
-    mainImagePreview.value = resolvePreviewUrlStrict(source);
-    mainImageThumb.value = resolveThumbUrlStrict(source);
-    formState.mainImage = String(source.rawUrl || source.url || '').trim();
+
+    // 从 filePreviewMap 中获取预览 URL
+    const previewUrl = getPreviewUrl(source.fileId);
+    mainImagePreview.value = previewUrl;
+    mainImageThumb.value = previewUrl;
+    formState.mainImage = String(source.fileId);
 }
 
 function isCurrentMainImage(file: EnhancedUploadFile) {
@@ -459,7 +497,7 @@ const handleImageCustomRequest: UploadProps['customRequest'] = async (options) =
             bizType: 'product',
             mediaType: 'image',
             file: rawFile,
-            onProgress: (percent) => options.onProgress?.({ percent }),
+            onProgress: (percent) => options.onProgress?.({percent}),
         });
 
         const fileId = pickUploadedFileId(uploaded);
@@ -477,6 +515,11 @@ const handleImageCustomRequest: UploadProps['customRequest'] = async (options) =
         };
 
         const ok = await enrichImageSigned(next, 120, 120);
+
+        // 将新上传的文件预览 URL 添加到 filePreviewMap
+        if (fileId && next.previewUrl) {
+            filePreviewMap.value.set(fileId, next.previewUrl);
+        }
 
         const nextRaw = String(next.rawUrl || '').trim();
         const exists = imagesFileList.value.some((x) => String(x.rawUrl || x.url || '').trim() === nextRaw);
@@ -508,7 +551,7 @@ const handleMainImageCustomRequest: UploadProps['customRequest'] = async (option
             bizType: 'product',
             mediaType: 'image',
             file: rawFile,
-            onProgress: (percent) => options.onProgress?.({ percent }),
+            onProgress: (percent) => options.onProgress?.({percent}),
         });
 
         const fileId = pickUploadedFileId(uploaded);
@@ -526,14 +569,26 @@ const handleMainImageCustomRequest: UploadProps['customRequest'] = async (option
         };
 
         const ok = await enrichImageSigned(next, 600, 600);
+
+        // 将新上传的主图预览 URL 添加到 filePreviewMap
+        if (fileId && next.previewUrl) {
+            filePreviewMap.value.set(fileId, next.previewUrl);
+        }
+
         mainImageFile.value = next;
         await refreshMainImageView();
 
         const raw = String(next.rawUrl || '').trim();
         const exists = imagesFileList.value.some((x) => String(x.rawUrl || x.url || '').trim() === raw);
         if (!exists && imagesFileList.value.length < MAX_IMAGES) {
-            const listItem: EnhancedUploadFile = { ...next, uid: `img-${next.uid}` };
+            const listItem: EnhancedUploadFile = {...next, uid: `img-${next.uid}`};
             await enrichImageSigned(listItem, 120, 120);
+
+            // 将新添加的图片预览 URL 也添加到 filePreviewMap
+            if (listItem.fileId && listItem.previewUrl) {
+                filePreviewMap.value.set(listItem.fileId, listItem.previewUrl);
+            }
+
             imagesFileList.value = [...imagesFileList.value, listItem];
         }
 
@@ -569,9 +624,10 @@ function onDragEnd() {
 }
 
 function handlePreview(file: EnhancedUploadFile) {
-    const src = resolvePreviewUrlStrict(file);
-    if (!src) {
-        message.warning('该图片未获取到签名预览URL');
+    // 使用 getPreviewUrl 从 filePreviewMap 获取预览 URL
+    const src = getPreviewUrl(file.fileId);
+    if (!src || src === fallbackImage) {
+        message.warning('该图片未获取到预览URL');
         return;
     }
     previewImage.value = src;
@@ -585,7 +641,7 @@ async function removeImageAt(index: number) {
 
     try {
         const fileId = target.fileId || Number((target.response as any)?.id || 0) || undefined;
-        if (fileId) await deleteFileApi({ fileId: String(fileId) });
+        if (fileId) await deleteFileApi({fileId: String(fileId)});
     } catch (e) {
         console.warn('delete file api skipped/failed:', e);
     }
@@ -604,9 +660,12 @@ async function removeImageAt(index: number) {
 }
 
 function syncImagesToForm() {
-    const orderedUrls = imagesFileList.value.map((f) => String(f.rawUrl || f.url || '').trim()).filter(Boolean);
-    (formState as any).images = orderedUrls;
-    formState.mainImage = String(mainImageFile.value?.rawUrl || mainImageFile.value?.url || '').trim();
+    // 提交时存储 fileId 数组
+    const orderedFileIds = imagesFileList.value.map((f) => f.fileId).filter((id): id is number => !!id && id > 0);
+    (formState as any).images = orderedFileIds;
+
+    // 提交时存储主图 fileId
+    formState.mainImage = mainImageFile.value?.fileId || '';
 }
 
 async function fetchDetail() {
@@ -630,39 +689,60 @@ async function fetchDetail() {
         categoryInfo.id = String(detail.categoryId ?? '');
         categoryInfo.name = detail.categoryName || '';
 
-        const images: string[] = Array.isArray((detail as any).images) ? (detail as any).images.filter(Boolean) : [];
-        imagesFileList.value = images.slice(0, MAX_IMAGES).map((url, idx) => ({
-            uid: `init-${idx}-${url}`,
-            name: `图片${idx + 1}`,
-            status: 'done',
-            url,
-            rawUrl: url,
-            fileId: parseFileIdFromUrl(url) || undefined,
-            response: { url },
-        }));
+        // 收集所有图片的 fileId
+        const fileIds: number[] = [];
 
-        await Promise.all(imagesFileList.value.map((f) => enrichImageSigned(f, 120, 120)));
-        imagesFileList.value = [...imagesFileList.value];
+        // 处理主图
+        if (detail.mainImage) {
+            fileIds.push(Number(detail.mainImage));
+        }
 
-        const mainRaw = normalizeUrl((detail as any).mainImage);
-        if (mainRaw) {
+
+        // 处理图片集
+        const images: string[] = Array.isArray((detail as any).images) ? (detail as any).images : [];
+        const imageFileIds: number[] = [];
+        imagesFileList.value = images.slice(0, MAX_IMAGES).map((url, idx) => {
+            const fileId = Number(url);
+            if (fileId) {
+                fileIds.push(fileId);
+                imageFileIds.push(fileId);
+            }
+            return {
+                uid: `init-${idx}-${url}`,
+                name: `图片${idx + 1}`,
+                status: 'done',
+                url: url,
+                rawUrl: url,
+                fileId: fileId,
+                response: {url},
+            };
+        });
+        console.log(imagesFileList.value.length);
+
+        // 批量加载所有文件的预览 URL
+        await loadFilePreviews(fileIds);
+
+        // 设置主图
+        if (detail.mainImage) {
             const mainFile: EnhancedUploadFile = {
-                uid: `main-init-${mainRaw}`,
+                uid: `main-init-${detail.mainImage}`,
                 name: '主图',
                 status: 'done',
-                url: mainRaw,
-                rawUrl: mainRaw,
-                fileId: parseFileIdFromUrl(mainRaw) || undefined,
-                response: { url: mainRaw },
+                url: detail.mainImage,
+                rawUrl: detail.mainImage,
+                fileId: Number(detail.mainImage),
+                response: {url: detail.mainImage},
             };
-            await enrichImageSigned(mainFile, 600, 600);
             mainImageFile.value = mainFile;
         } else {
             mainImageFile.value = imagesFileList.value[0] || null;
         }
 
-        syncImagesToForm();
+        // 刷新主图预览视图
         await refreshMainImageView();
+
+        // 触发图片列表更新
+        imagesFileList.value = [...imagesFileList.value];
     } catch {
         message.error('获取商品详情失败');
     } finally {
@@ -697,9 +777,9 @@ async function handleSubmit() {
             status: formState.status,
             isNew: formState.isNew,
             isHot: formState.isHot,
-            mainImage: formState.mainImage?.trim() || undefined,
+            mainImage: formState.mainImage || undefined,
+            images: (formState as any).images || undefined,
             videoUrl: formState.videoUrl?.trim() || undefined,
-            ...(Array.isArray((formState as any).images) ? { images: (formState as any).images } : {}),
         } as UpdateProductRequest;
 
         await updateProductApi(productId.value, payload);
@@ -720,36 +800,163 @@ function handleBack() {
 </script>
 
 <style scoped>
-.product-edit-page { min-height: 100%; padding: 16px; color: hsl(var(--foreground)); background: hsl(var(--background)); }
-.edit-card { background: hsl(var(--card)); }
-.page-title { color: hsl(var(--foreground)); }
-
-.main-image-wrap { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
-.main-image-static { position: relative; width: 180px; }
-.main-image { border-radius: 8px; }
-.main-image-mask {
-    position: absolute; left: 0; right: 0; bottom: 0;
-    font-size: 12px; text-align: center; color: #fff;
-    background: linear-gradient(to top, rgba(0,0,0,.55), transparent);
-    padding: 6px 0;
-    border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;
+.product-edit-page {
+    min-height: 100%;
+    padding: 16px;
+    color: hsl(var(--foreground));
+    background: hsl(var(--background));
 }
-.main-image-actions { display: flex; flex-direction: column; gap: 8px; }
-.main-image-tip { font-size: 12px; color: #999; }
 
-.images-editor { display: flex; flex-wrap: wrap; gap: 8px; }
-.sortable-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.edit-card {
+    background: hsl(var(--card));
+}
 
-.img-card { width: 104px; height: 104px; border: 1px solid #d9d9d9; border-radius: 8px; position: relative; overflow: hidden; background: #fafafa; }
-.img-card__img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
-.drag-handle { position: absolute; left: 4px; top: 4px; z-index: 3; background: rgba(0,0,0,.45); color: #fff; border-radius: 4px; font-size: 12px; padding: 0 6px; line-height: 18px; cursor: move; user-select: none; }
-.main-badge { position: absolute; right: 4px; top: 4px; z-index: 3; background: #1677ff; color: #fff; border-radius: 4px; font-size: 12px; padding: 0 6px; line-height: 18px; }
-.img-card__actions { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px; display: flex; justify-content: space-between; gap: 4px; background: linear-gradient(to top, rgba(0,0,0,.6), transparent); }
+.page-title {
+    color: hsl(var(--foreground));
+}
 
-.upload-trigger { width: 104px; height: 104px; border: 1px dashed #d9d9d9; border-radius: 8px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
-.upload-trigger:hover { border-color: #1677ff; color: #1677ff; }
-.upload-trigger__hint { margin-top: 4px; font-size: 12px; color: #999; }
+.main-image-wrap {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
 
-.images-tip { margin-top: 8px; color: #999; font-size: 12px; }
-.footer-actions { margin-top: 12px; text-align: right; }
+.main-image-static {
+    position: relative;
+    width: 180px;
+}
+
+.main-image {
+    border-radius: 8px;
+}
+
+.main-image-mask {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    font-size: 12px;
+    text-align: center;
+    color: #fff;
+    background: linear-gradient(to top, rgba(0, 0, 0, .55), transparent);
+    padding: 6px 0;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.main-image-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.main-image-tip {
+    font-size: 12px;
+    color: #999;
+}
+
+.images-editor {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sortable-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.img-card {
+    width: 104px;
+    height: 104px;
+    border: 1px solid #d9d9d9;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    background: #fafafa;
+}
+
+.img-card__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+.drag-handle {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    z-index: 3;
+    background: rgba(0, 0, 0, .45);
+    color: #fff;
+    border-radius: 4px;
+    font-size: 12px;
+    padding: 0 6px;
+    line-height: 18px;
+    cursor: move;
+    user-select: none;
+}
+
+.main-badge {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    z-index: 3;
+    background: #1677ff;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 12px;
+    padding: 0 6px;
+    line-height: 18px;
+}
+
+.img-card__actions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 4px;
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    background: linear-gradient(to top, rgba(0, 0, 0, .6), transparent);
+}
+
+.upload-trigger {
+    width: 104px;
+    height: 104px;
+    border: 1px dashed #d9d9d9;
+    border-radius: 8px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.upload-trigger:hover {
+    border-color: #1677ff;
+    color: #1677ff;
+}
+
+.upload-trigger__hint {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #999;
+}
+
+.images-tip {
+    margin-top: 8px;
+    color: #999;
+    font-size: 12px;
+}
+
+.footer-actions {
+    margin-top: 12px;
+    text-align: right;
+}
 </style>

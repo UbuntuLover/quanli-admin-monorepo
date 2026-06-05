@@ -138,8 +138,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import {computed, onMounted, ref} from 'vue';
+import {useRoute, useRouter} from 'vue-router';
 import {
     Button as AButton,
     Card as ACard,
@@ -147,17 +147,17 @@ import {
     Descriptions as ADescriptions,
     Empty as AEmpty,
     Image as AImage,
+    message,
     Row as ARow,
     Space as ASpace,
     Spin as ASpin,
     Table as ATable,
     Tag as ATag,
-    message,
 } from 'ant-design-vue';
 
-import { getProductDetailApi } from '#/api/products/product';
-import { getFilePreviewApi } from '#/api/file';
-import type { ProductDTO } from '#/types/product';
+import {getProductDetailApi} from '#/api/products/product';
+import {batchGetFilePreviewApi, getFilePreviewApi} from '#/api/file';
+import type {ProductDTO} from '#/types/product';
 
 const ADescriptionsItem = ADescriptions.Item;
 const AImagePreviewGroup = AImage.PreviewGroup;
@@ -176,6 +176,9 @@ const mainImagePreview = ref('');
 const mainImageThumb = ref('');
 const skuImageMap = ref<Record<string, { preview: string; thumb: string }>>({});
 const lastRefreshAt = ref(0);
+
+// fileId -> previewUrl 映射（统一存储所有图片的预览URL）
+const filePreviewMap = ref<Map<number, string>>(new Map());
 
 const visibleImages = computed(() => signedImages.value.slice(0, visibleImageCount.value));
 
@@ -201,6 +204,28 @@ let cache: CacheMap = loadCache();
 const inflight = new Map<string, Promise<CacheItem>>();
 
 onMounted(fetchDetail);
+
+// 批量加载文件预览 URL（使用批量接口）
+async function batchLoadFilePreviews(fileIds: number[]) {
+    if (fileIds.length === 0) return;
+    
+    filePreviewMap.value.clear();
+    
+    try {
+        const previewResults = await batchGetFilePreviewApi({ fileIds: fileIds.map(String) });
+        for (const item of previewResults) {
+            filePreviewMap.value.set(item.fileId, item.previewUrl);
+        }
+    } catch (e) {
+        console.error('批量获取文件预览失败:', e);
+    }
+}
+
+// 根据 fileId 获取预览 URL
+function getPreviewUrl(fileId?: number): string {
+    if (!fileId || fileId <= 0) return '';
+    return filePreviewMap.value.get(fileId) || '';
+}
 
 function normalizeUrl(url?: string) {
     return String(url ?? '').trim().replace(/\s+/g, '');
@@ -300,39 +325,80 @@ async function fetchDetail() {
 
     loading.value = true;
     try {
-        const res = await getProductDetailApi(productId.value as any);
-        const cloned = JSON.parse(JSON.stringify(res)) as ProductDTO;
-        viewProduct.value = cloned;
+        viewProduct.value = await getProductDetailApi(productId.value as any);
 
+        // 收集所有图片的 fileId
+        const fileIdMap = new Map<number, { source: string; type: 'main' | 'image' | 'sku'; skuId?: string }>();
+        
         // 主图
-        const mainRaw = normalizeUrl((cloned as any).mainImage);
-        if (mainRaw) {
-            const pair = await resolveImageByUrl(mainRaw, 600, 600);
-            mainImagePreview.value = pair.preview;
-            mainImageThumb.value = pair.thumb;
+        const mainRaw = normalizeUrl(viewProduct.value?.mainImage);
+        const mainFileId = mainRaw;
+        if (mainFileId) {
+            fileIdMap.set(Number(mainFileId), { source: mainRaw, type: 'main' });
+        }
+
+        // 商品图
+        const imgs = Array.isArray(viewProduct.value?.images) ? viewProduct.value?.images : [];
+        imgs.forEach((u: string) => {
+            if (u && !fileIdMap.has(Number(u))) {
+                fileIdMap.set(Number(u), { source: u, type: 'image' });
+            }
+        });
+
+
+
+        // SKU图
+        const skus = Array.isArray(viewProduct.value?.skus) ? viewProduct.value?.skus : [];
+        const skuImageData: Array<{ id: string; fileId: number | null; source: string }> = [];
+        skus.forEach((s: any) => {
+            const imgRaw = normalizeUrl(String(s?.image || ''));
+            const fid = imgRaw ? parseFileIdFromUrl(imgRaw) : null;
+            skuImageData.push({ id: String(s.id), fileId: fid, source: imgRaw });
+            if (fid && !fileIdMap.has(fid)) {
+                fileIdMap.set(fid, { source: imgRaw, type: 'sku', skuId: String(s.id) });
+            }
+        });
+
+        // 批量获取所有预览 URL
+        const fileIds = Array.from(fileIdMap.keys());
+        await batchLoadFilePreviews(fileIds);
+
+        // 设置主图预览
+        if (mainFileId) {
+            const previewUrl = getPreviewUrl(Number(mainFileId));
+            mainImagePreview.value = previewUrl;
+            mainImageThumb.value = previewUrl;
+        } else if (mainRaw) {
+            // 无 fileId，兜底使用原 URL
+            mainImagePreview.value = mainRaw;
+            mainImageThumb.value = mainRaw;
         } else {
             mainImagePreview.value = '';
             mainImageThumb.value = '';
         }
 
-        // 商品图
-        const imgs = Array.isArray((cloned as any).images) ? (cloned as any).images : [];
-        const signed = await Promise.all(
-            imgs.map((u: string) => resolveImageByUrl(u, 120, 120)),
-        );
-        signedImages.value = signed.filter((x) => x.preview);
+        // 设置商品图预览
+        signedImages.value = imgs
+            .map((u: string) => {
+                if (u) {
+                    const previewUrl = getPreviewUrl(Number(u));
+                    return { preview: previewUrl || u, thumb: previewUrl || u };
+                }
+                return { preview: u, thumb: u };
+            })
+            .filter((x) => x.preview);
 
-        // SKU图
-        const skus = Array.isArray((cloned as any).skus) ? (cloned as any).skus : [];
-        const skuPairs = await Promise.all(
-            skus.map(async (s: any) => {
-                const pair = await resolveImageByUrl(String(s?.image || ''), 80, 80);
-                return { id: String(s.id), pair };
-            }),
-        );
+        // 设置 SKU 图预览
         const m: Record<string, { preview: string; thumb: string }> = {};
-        skuPairs.forEach(({ id, pair }) => {
-            if (pair.preview) m[id] = pair;
+        skuImageData.forEach(({ id, fileId, source }) => {
+            if (fileId) {
+                const previewUrl = getPreviewUrl(fileId);
+                if (previewUrl) {
+                    m[id] = { preview: previewUrl, thumb: previewUrl };
+                }
+            } else if (source) {
+                m[id] = { preview: source, thumb: source };
+            }
         });
         skuImageMap.value = m;
 

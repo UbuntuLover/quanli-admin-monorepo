@@ -350,19 +350,42 @@ async function loadDetail(id: string) {
         editForm.name = detail.name;
         editForm.parentId = String(detail.parentId ?? '0');
         editForm.sort = Number(detail.sort || 0);
-        editForm.icon = detail.icon || '';
+        editForm.icon = detail.icon || '';  // 保持存储 fileId
         editForm.status = detail.status || 'ACTIVE';
 
-        iconFileList.value = detail.icon
-            ? [
-                {
+        if (detail.icon) {
+            const iconFileId = Number(detail.icon);
+            if (!isNaN(iconFileId) && iconFileId > 0) {
+                // 调用预览接口获取 URL
+                try {
+                    const preview = await getFilePreviewApi(iconFileId);
+                    iconFileList.value = [{
+                        uid: String(iconFileId),
+                        name: '分类图标',
+                        status: 'done',
+                        url: preview.previewUrl || preview.thumbUrl || '',
+                    }];
+                } catch {
+                    // 获取预览失败，使用原 icon 作为 URL（兼容旧数据）
+                    iconFileList.value = [{
+                        uid: String(detail.id),
+                        name: '分类图标',
+                        status: 'done',
+                        url: detail.icon,
+                    }];
+                }
+            } else {
+                // 非数字格式，直接作为 URL 使用
+                iconFileList.value = [{
                     uid: String(detail.id),
                     name: '分类图标',
                     status: 'done',
                     url: detail.icon,
-                },
-            ]
-            : [];
+                }];
+            }
+        } else {
+            iconFileList.value = [];
+        }
     } catch (e: any) {
         message.error(e?.message || '加载分类详情失败');
     } finally {
@@ -397,13 +420,13 @@ const beforeIconUpload: UploadProps['beforeUpload'] = async (raw) => {
 
         const displayUrl = await resolveDisplayUrl(saved);
 
-        editForm.icon = displayUrl;
+        editForm.icon = String(saved.id);  // 修改：存储 fileId
         iconFileList.value = [
             {
                 uid: String(saved.id),
                 name: saved.originalName || file.name,
                 status: 'done',
-                url: displayUrl,
+                url: displayUrl,  // 显示使用预览 URL
             },
         ];
         message.success('图标上传成功');
@@ -483,13 +506,13 @@ const beforeCreateIconUpload: UploadProps['beforeUpload'] = async (raw) => {
 
         const displayUrl = await resolveDisplayUrl(saved);
 
-        createChildForm.icon = displayUrl;
+        createChildForm.icon = String(saved.id);  // 修改：存储 fileId
         createIconFileList.value = [
             {
                 uid: String(saved.id),
                 name: saved.originalName || file.name,
                 status: 'done',
-                url: displayUrl,
+                url: displayUrl,  // 显示使用预览 URL
             },
         ];
         message.success('图标上传成功');

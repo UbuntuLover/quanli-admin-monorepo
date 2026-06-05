@@ -113,7 +113,8 @@ export interface UpdateProductRequest {
     status?: string;
     isNew?: number;
     isHot?: number;
-    mainImage?: string;
+    mainImage?: string | number;
+    images?: number[];
     videoUrl?: string;
 }
 

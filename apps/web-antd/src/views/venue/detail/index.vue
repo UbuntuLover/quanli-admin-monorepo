@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getVenueDetailForAdminApi, type VenueDetailForAdminDTO, type BusinessHourConfig } from '#/api/venue/create';
+import { batchGetFilePreviewApi } from '#/api/file';
 import {
     Card as ACard,
     Descriptions as ADescriptions,
@@ -25,6 +26,9 @@ const router = useRouter();
 
 const loading = ref(false);
 const venueDetail = ref<VenueDetailForAdminDTO | null>(null);
+
+// fileId -> previewUrl 映射
+const filePreviewMap = ref<Map<number, string>>(new Map());
 
 const venueId = computed(() => {
     const id = route.query.id;
@@ -59,12 +63,37 @@ function statusText(status: number) {
 
 const coverImage = computed(() => {
     if (!venueDetail.value) return '';
-    return venueDetail.value.backgroundImage || venueDetail.value.logo || '';
+    
+    // 优先使用背景图
+    if (venueDetail.value.backgroundImage) {
+        const bgId = Number(venueDetail.value.backgroundImage);
+        if (!isNaN(bgId) && bgId > 0) {
+            return filePreviewMap.value.get(bgId) || venueDetail.value.backgroundImage;
+        }
+        return venueDetail.value.backgroundImage;
+    }
+    
+    // 其次使用 logo
+    if (venueDetail.value.logo) {
+        const logoId = Number(venueDetail.value.logo);
+        if (!isNaN(logoId) && logoId > 0) {
+            return filePreviewMap.value.get(logoId) || venueDetail.value.logo;
+        }
+        return venueDetail.value.logo;
+    }
+    
+    return '';
 });
 
 const photoList = computed(() => {
     if (!venueDetail.value?.photos?.length) return [];
-    return venueDetail.value.photos;
+    return venueDetail.value.photos.map((photo) => {
+        const photoId = Number(photo);
+        if (!isNaN(photoId) && photoId > 0) {
+            return filePreviewMap.value.get(photoId) || photo;
+        }
+        return photo;
+    }).filter(Boolean);
 });
 
 const weekDayLabels: Record<string, string> = {
@@ -88,8 +117,51 @@ const businessHoursList = computed(() => {
 async function loadVenueDetail(id: number) {
     try {
         loading.value = true;
+        filePreviewMap.value.clear();
+        
         const data = await getVenueDetailForAdminApi(id);
         venueDetail.value = data;
+
+        // 收集所有图片的 fileId
+        const fileIds: number[] = [];
+        
+        // logo
+        if (data.logo) {
+            const logoId = Number(data.logo);
+            if (!isNaN(logoId) && logoId > 0) {
+                fileIds.push(logoId);
+            }
+        }
+        
+        // backgroundImage
+        if (data.backgroundImage) {
+            const bgId = Number(data.backgroundImage);
+            if (!isNaN(bgId) && bgId > 0) {
+                fileIds.push(bgId);
+            }
+        }
+        
+        // photos
+        if (data.photos && Array.isArray(data.photos)) {
+            data.photos.forEach((photo) => {
+                const photoId = Number(photo);
+                if (!isNaN(photoId) && photoId > 0) {
+                    fileIds.push(photoId);
+                }
+            });
+        }
+
+        // 批量获取预览 URL
+        if (fileIds.length > 0) {
+            try {
+                const previewResults = await batchGetFilePreviewApi({ fileIds: fileIds.map(String) });
+                for (const item of previewResults) {
+                    filePreviewMap.value.set(item.fileId, item.previewUrl);
+                }
+            } catch (e) {
+                console.error('批量获取文件预览失败:', e);
+            }
+        }
     } catch (e: any) {
         message.error(e?.message || '加载场馆详情失败');
     } finally {
