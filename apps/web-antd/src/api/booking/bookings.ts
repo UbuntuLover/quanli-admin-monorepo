@@ -63,6 +63,25 @@ export interface AdminBookingPageVO extends PageResult<AdminBookingListItemVO> {
 }
 
 
+export interface NoShowHandleDTO {
+    bookingId: string;
+    handleType: 'CANCEL' | 'DEDUCT' | 'LATE';  // 处理类型：CANCEL-取消预约，DEDUCT-正常扣次，LATE-迟到
+    reason?: string;
+}
+
+export interface NoShowProcessVO {
+    bookingId: string;
+    handleType: 'CANCEL' | 'DEDUCT' | 'LATE'; // 处理类型 CANCEL-取消预约，DEDUCT-正常扣次，LATE-迟到
+    handleResult?: string;
+    handledAt?: string;
+}
+
+export interface NoShowStatisticsVO {
+    pendingNoShowCount?: number;
+    pendingHandleCount?: number;
+    waitingAdminHandleCount?: number;
+}
+
 interface MemberInfo {
     id: string;
     name: string | null;
@@ -336,4 +355,13 @@ export function updateAdminBookingStatusApi(data: AdminUpdateBookingStatusDTO) {
         operatorId: data.operatorId ? Number(data.operatorId) : undefined,
     };
     return requestClient.post(`${ADMIN_BOOKINGS_BASE}/update-status`, payload);
+}
+
+/*  管理员手动处理爽约*/
+export async function adminHandleNoShowApi(data: NoShowHandleDTO): Promise<NoShowProcessVO> {
+    return await requestClient.post<NoShowProcessVO>(`${ADMIN_BOOKINGS_BASE}/no-show/handle`, data)
+}
+
+export async function adminGetNoShowStatisticsApi() {
+    return await requestClient.get<NoShowStatisticsVO>(`${ADMIN_BOOKINGS_BASE}/getNoShowStatistics`);
 }
