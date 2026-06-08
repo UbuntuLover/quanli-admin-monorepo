@@ -24,6 +24,7 @@ import {
     type AdminMemberDetailDTO,
 } from '#/api/member/member';
 import { getAdminPackagesByMemberIdApi, type AdminMemberPackageListDTO } from '#/api/member-packages/member-packages';
+import { getFilePreviewApi } from '#/api/file';
 
 defineOptions({ name: 'MemberDetail' });
 
@@ -33,6 +34,7 @@ const loading = ref(false);
 const memberDetail = ref<AdminMemberDetailDTO | null>(null);
 const memberPackages = ref<AdminMemberPackageListDTO[]>([]);
 const packagesLoading = ref(false);
+const avatarPreviewUrl = ref<string>('');  // 头像预览 URL
 
 function statusColor(status: number) {
     switch (status) {
@@ -104,9 +106,25 @@ function formatDuration(minutes: number | undefined | null): string {
 
 async function loadMemberDetail(id: string) {
     loading.value = true;
+    avatarPreviewUrl.value = '';  // 清空之前的头像
     try {
         const data = await getAdminMemberDetailApi(id);
         memberDetail.value = data;
+        
+        // 如果有头像且是 fileId，获取预览 URL
+        if (data.avatar) {
+            const avatarId = Number(data.avatar);
+            if (!isNaN(avatarId) && avatarId > 0) {
+                try {
+                    const preview = await getFilePreviewApi(avatarId);
+                    avatarPreviewUrl.value = preview.previewUrl || preview.thumbUrl || '';
+                } catch (e) {
+                    console.error('获取头像预览失败:', e);
+                    avatarPreviewUrl.value = '';
+                }
+            }
+        }
+        
         // 同时加载会员权益
         await loadMemberPackages(String(id));
     } catch (e: any) {
@@ -213,7 +231,7 @@ onMounted(() => {
                     <a-row :gutter="24">
                         <!-- 左侧头像区域 -->
                         <a-col :xs="24" :md="6" class="text-center">
-                            <a-avatar :src="memberDetail.avatar" :size="120">
+                            <a-avatar :src="avatarPreviewUrl || memberDetail.avatar" :size="120">
                                 {{ (memberDetail.name || memberDetail.nickname || '用户')[0] }}
                             </a-avatar>
                             <div class="mt-4">

@@ -27,6 +27,7 @@ export const overridesPreferences = defineOverridesPreferences({
         watermark: true,
         watermarkContent: '拳力世家',
         defaultHomePath: '/coach/register-approval',
+        defaultAvatar: '/static/quanli.png'
     },
     copyright: {
         companyName: '拳力世家',

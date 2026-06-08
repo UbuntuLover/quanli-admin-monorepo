@@ -5,9 +5,7 @@ import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { AuthenticationLoginExpiredModal } from '@vben/common-ui';
-import { VBEN_DOC_URL, VBEN_GITHUB_URL } from '@vben/constants';
 import { useWatermark } from '@vben/hooks';
-import { BookOpenText, CircleHelp, SvgGithubIcon } from '@vben/icons';
 import {
   BasicLayout,
   LockScreen,
@@ -93,33 +91,33 @@ const menus = computed(() => [
     icon: 'lucide:user',
     text: $t('page.auth.profile'),
   },
-  {
-    handler: () => {
-      openWindow(VBEN_DOC_URL, {
-        target: '_blank',
-      });
-    },
-    icon: BookOpenText,
-    text: $t('ui.widgets.document'),
-  },
-  {
-    handler: () => {
-      openWindow(VBEN_GITHUB_URL, {
-        target: '_blank',
-      });
-    },
-    icon: SvgGithubIcon,
-    text: 'GitHub',
-  },
-  {
-    handler: () => {
-      openWindow(`${VBEN_GITHUB_URL}/issues`, {
-        target: '_blank',
-      });
-    },
-    icon: CircleHelp,
-    text: $t('ui.widgets.qa'),
-  },
+  // {
+  //   handler: () => {
+  //     openWindow(VBEN_DOC_URL, {
+  //       target: '_blank',
+  //     });
+  //   },
+  //   icon: BookOpenText,
+  //   text: $t('ui.widgets.document'),
+  // },
+  // {
+  //   handler: () => {
+  //     openWindow(VBEN_GITHUB_URL, {
+  //       target: '_blank',
+  //     });
+  //   },
+  //   icon: SvgGithubIcon,
+  //   text: 'GitHub',
+  // },
+  // {
+  //   handler: () => {
+  //     openWindow(`${VBEN_GITHUB_URL}/issues`, {
+  //       target: '_blank',
+  //     });
+  //   },
+  //   icon: CircleHelp,
+  //   text: $t('ui.widgets.qa'),
+  // },
 ]);
 
 const avatar = computed(() => {
@@ -223,7 +221,7 @@ watch(
         :avatar
         :menus
         :text="userStore.userInfo?.realName"
-        description="ann.vben@gmail.com"
+        description="拳力世家管理"
         tag-text="Pro"
         @logout="handleLogout"
       />

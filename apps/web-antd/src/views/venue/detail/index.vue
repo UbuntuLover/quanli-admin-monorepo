@@ -323,7 +323,7 @@ onMounted(() => {
                     <div class="thumbnails-section">
                         <a-image.PreviewGroup>
                             <a-row :gutter="[8, 8]">
-                                <a-col v-for="(img, index) in photoList" :key="index" :span="8">
+                                <a-col v-for="(img, index) in photoList" :key="index" :span="12">
                                     <a-image :src="img" :alt="`场馆图片${index + 1}`" class="thumbnail-image" />
                                 </a-col>
                             </a-row>
@@ -399,17 +399,18 @@ onMounted(() => {
 }
 
 .thumbnail-image {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
+    width: 50%;
+    height: 120px;
+    object-fit: scale-down;
     border-radius: 4px;
 }
 
 .notice-section {
     padding: 12px;
-    background: #fafafa;
+    background: var(--color-bg-container);
     border-radius: 4px;
-    color: #666;
+    color: var(--color-text);
+    border: 1px solid var(--color-border-secondary);
 }
 
 .text-gray-400 {
