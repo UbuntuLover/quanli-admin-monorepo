@@ -150,6 +150,9 @@ function getStatusText(status: BookingStatus | number | undefined): string {
         1: '已预约/待确认',
         2: '已确认',
         3: '进行中',
+        4: '已完成',
+        5: '已取消',
+        6: '爽约',
         9: '已取消',
     };
     return statusMap[status] || '-';
