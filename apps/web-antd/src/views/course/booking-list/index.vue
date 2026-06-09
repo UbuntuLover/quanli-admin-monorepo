@@ -157,11 +157,65 @@
                             >
                                 详情
                             </a-button>
+                            <a-button
+                                v-if="record.status === 6"
+                                type="link"
+                                size="small"
+                                danger
+                                @click="handleCancelNoShow(record)"
+                            >
+                                解除爽约
+                            </a-button>
                         </a-space>
                     </template>
                 </template>
             </a-table>
         </a-card>
+
+        <!-- 解除爽约弹窗 -->
+        <a-modal
+            v-model:open="cancelNoShowModalVisible"
+            title="解除爽约"
+            :confirm-loading="cancelNoShowLoading"
+            @ok="handleConfirmCancelNoShow"
+            @cancel="handleCancelNoShowModalClose"
+        >
+            <div class="cancel-noshow-modal-content">
+                <div class="info-row">
+                    <span class="label">预约编号：</span>
+                    <span class="value">{{ currentNoShowRecord?.bookingNo || '-' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">会员姓名：</span>
+                    <span class="value">{{ currentNoShowRecord?.member?.name || currentNoShowRecord?.memberName || '-' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">预约时间：</span>
+                    <span class="value">{{ currentNoShowRecord?.bookingDate }} {{ currentNoShowRecord?.startTime }}</span>
+                </div>
+
+                <a-divider />
+
+                <div class="warning-box">
+                    <span class="warning-icon">⚠️</span>
+                    <div class="warning-text">
+                        <p><strong>操作提示</strong></p>
+                        <p>此操作将解除该预约的爽约状态，并恢复用户的权益（如扣减的课程次数）。</p>
+                        <p>请确保用户已提供合理的理由，并在下方填写原因说明。</p>
+                    </div>
+                </div>
+
+                <a-form-item label="解除原因" required style="margin-top: 16px;">
+                    <a-textarea
+                        v-model:value="cancelNoShowReason"
+                        :rows="3"
+                        placeholder="请输入解除爽约的原因（必填）"
+                        :maxlength="200"
+                        show-count
+                    />
+                </a-form-item>
+            </div>
+        </a-modal>
     </div>
 </template>
 
@@ -177,9 +231,12 @@ import {
     Card as ACard,
     Col as ACol,
     DatePicker as ADatePicker,
+    Divider as ADivider,
     Form as AForm,
     FormItem as AFormItem,
     Input as AInput,
+    Modal,
+    message,
     Row as ARow,
     Select as ASelect,
     SelectOption as ASelectOption,
@@ -189,11 +246,15 @@ import {
     Tag as ATag,
 } from 'ant-design-vue';
 
+const ATextarea = AInput.TextArea;
+
 import {
     pageAdminBookingsNormalizedApi,
-    type AdminBookingListItemVO,
     type AdminBookingQueryDTO,
+    type AdminBookingListItemVO,
     type BookingStatus,
+    adminHandleNoShowApi,
+    type NoShowHandleDTO,
 } from '#/api/booking/bookings';
 import type { NormalizedPageResult } from '#/api/_shared/page';
 import { batchGetFilePreviewApi } from '#/api/file';
@@ -241,6 +302,12 @@ const avatarPreviewMap = reactive(new Map<string, string>());
  * 用于头像区域局部骨架屏。
  */
 const avatarLoadingMap = reactive(new Set<string>());
+
+/** 解除爽约弹窗相关状态 */
+const cancelNoShowModalVisible = ref(false);
+const cancelNoShowLoading = ref(false);
+const currentNoShowRecord = ref<AdminBookingListItemVO | null>(null);
+const cancelNoShowReason = ref('');
 
 const columns = [
     {
@@ -576,6 +643,56 @@ function handleDetail(record: AdminBookingListItemVO) {
     });
 }
 
+/**
+ * 打开解除爽约弹窗。
+ * 
+ * 当订单被标记为爽约（状态码 6）后，若用户提供合理理由，管理员可手动解除爽约，恢复用户权益。
+ * 
+ * @param record - 预约记录
+ */
+function handleCancelNoShow(record: AdminBookingListItemVO) {
+    currentNoShowRecord.value = record;
+    cancelNoShowReason.value = '';
+    cancelNoShowModalVisible.value = true;
+}
+
+/** 关闭解除爽约弹窗 */
+function handleCancelNoShowModalClose() {
+    cancelNoShowModalVisible.value = false;
+    currentNoShowRecord.value = null;
+    cancelNoShowReason.value = '';
+}
+
+/** 确认解除爽约 */
+async function handleConfirmCancelNoShow() {
+    if (!currentNoShowRecord.value) {
+        return;
+    }
+
+    // 验证原因是否填写
+    if (!cancelNoShowReason.value.trim()) {
+        message.warning('请输入解除爽约的原因');
+        return;
+    }
+
+    cancelNoShowLoading.value = true;
+    try {
+        await adminHandleNoShowApi({
+            bookingId: currentNoShowRecord.value.bookingId,
+            handleType: 'CANCEL',  // CANCEL-取消预约（解除爽约状态）
+            reason: cancelNoShowReason.value.trim(),
+        });
+
+        message.success('解除爽约成功，用户权益已恢复');
+        handleCancelNoShowModalClose();
+        fetchBookingList();
+    } catch (error: any) {
+        message.error(error?.message || '解除爽约失败');
+    } finally {
+        cancelNoShowLoading.value = false;
+    }
+}
+
 onMounted(() => {
     loadVenues();
     fetchBookingList();
@@ -632,5 +749,53 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 2px;
+}
+
+/* 解除爽约弹窗样式 */
+.cancel-noshow-modal-content {
+    padding: 8px 0;
+}
+
+.cancel-noshow-modal-content .info-row {
+    display: flex;
+    margin-bottom: 8px;
+}
+
+.cancel-noshow-modal-content .label {
+    color: var(--color-text-secondary);
+    min-width: 80px;
+}
+
+.cancel-noshow-modal-content .value {
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+.cancel-noshow-modal-content .warning-box {
+    display: flex;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--color-warning-bg, #fffbe6);
+    border: 1px solid var(--color-warning, #faad14);
+    margin-bottom: 16px;
+}
+
+.cancel-noshow-modal-content .warning-icon {
+    font-size: 20px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.cancel-noshow-modal-content .warning-text {
+    flex: 1;
+}
+
+.cancel-noshow-modal-content .warning-text p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.cancel-noshow-modal-content .warning-text p:first-child {
+    margin-bottom: 4px;
 }
 </style>
