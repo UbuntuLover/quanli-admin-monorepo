@@ -67,6 +67,12 @@ const routes: RouteRecordRaw[] = [
                 name: 'CoachProfileEdit',
                 component: () => import('#/views/coach/profile/edit.vue'),
                 meta: {title: '编辑教练信息', hideInMenu: true},
+            },
+            {
+                path: '/coach/preference',
+                name: 'CoachPreference',
+                component: () => import('#/views/coach/preference/index.vue'),
+                meta: {title: '设置教练偏好', hideInMenu: true},
             }
         ]
     }];

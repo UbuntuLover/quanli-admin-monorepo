@@ -25,6 +25,7 @@ import {
 } from '#/api/member/member';
 import { getAdminPackagesByMemberIdApi, type AdminMemberPackageListDTO } from '#/api/member-packages/member-packages';
 import { getFilePreviewApi } from '#/api/file';
+import { listPreferredCoachesByMemberApi, type PreferredCoachVO } from '#/api/coach/coachpreference';
 
 defineOptions({ name: 'MemberDetail' });
 
@@ -35,6 +36,9 @@ const memberDetail = ref<AdminMemberDetailDTO | null>(null);
 const memberPackages = ref<AdminMemberPackageListDTO[]>([]);
 const packagesLoading = ref(false);
 const avatarPreviewUrl = ref<string>('');  // 头像预览 URL
+
+const preferredCoaches = ref<PreferredCoachVO[]>([]);
+const preferredCoachesLoading = ref(false);
 
 function statusColor(status: number) {
     switch (status) {
@@ -125,8 +129,11 @@ async function loadMemberDetail(id: string) {
             }
         }
         
-        // 同时加载会员权益
-        await loadMemberPackages(String(id));
+        // 同时加载会员权益和偏好教练
+        await Promise.all([
+            loadMemberPackages(String(id)),
+            loadPreferredCoaches(String(id)),
+        ]);
     } catch (e: any) {
         message.error(e?.message || '加载会员详情失败');
     } finally {
@@ -143,6 +150,30 @@ async function loadMemberPackages(memberId: string) {
         console.error('加载会员权益失败:', e);
     } finally {
         packagesLoading.value = false;
+    }
+}
+
+async function loadPreferredCoaches(memberId: string) {
+    preferredCoachesLoading.value = true;
+    try {
+        const data = await listPreferredCoachesByMemberApi(memberId);
+        preferredCoaches.value = data || [];
+    } catch (e) {
+        console.error('加载偏好教练失败:', e);
+    } finally {
+        preferredCoachesLoading.value = false;
+    }
+}
+
+function preferenceLevelText(level: number | null | undefined): string {
+    if (!level) return '-';
+    switch (level) {
+        case 1:
+            return '首选';
+        case 2:
+            return '次选';
+        default:
+            return '未知';
     }
 }
 
@@ -422,6 +453,57 @@ onMounted(() => {
                     </a-spin>
                 </a-card>
 
+                <!-- 偏好教练卡片 -->
+                <a-card hoverable :bordered="false" class="mb-4">
+                    <template #title>
+                        <span class="text-base font-semibold">偏好教练</span>
+                    </template>
+                    <template #extra>
+                        <a-button
+                            type="link"
+                            @click="router.push({ name: 'CoachPreference', query: { memberId: memberDetail.id } })"
+                        >
+                            设置偏好 <a-arrow-right-outlined />
+                        </a-button>
+                    </template>
+
+                    <a-spin :spinning="preferredCoachesLoading">
+                        <div v-if="preferredCoaches.length > 0" class="preferred-coaches-list">
+                            <a-row :gutter="16">
+                                <a-col
+                                    v-for="coach in preferredCoaches.slice(0, 4)"
+                                    :key="coach.id"
+                                    :xs="24"
+                                    :sm="12"
+                                    :md="6"
+                                >
+                                    <div class="preferred-coach-card">
+                                        <div class="coach-header">
+                                            <a-tag :color="coach.preferenceLevel === 1 ? 'success' : 'warning'">
+                                                {{ preferenceLevelText(coach.preferenceLevel) }}
+                                            </a-tag>
+                                        </div>
+                                        <div class="coach-name">{{ coach.coachName || '-' }}</div>
+                                        <div class="coach-info">
+                                            <div v-if="coach.venueName" class="coach-stat">
+                                                <span class="stat-label">场馆:</span>
+                                                <span class="stat-value">{{ coach.venueName }}</span>
+                                            </div>
+                                            <div v-if="coach.bookingCount !== undefined" class="coach-stat">
+                                                <span class="stat-label">预约次数:</span>
+                                                <span class="stat-value">{{ coach.bookingCount }}次</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a-col>
+                            </a-row>
+                        </div>
+                        <div v-else class="empty-state">
+                            <p>该会员暂无偏好教练</p>
+                        </div>
+                    </a-spin>
+                </a-card>
+
                 <!-- 时间信息卡片 -->
                 <a-card :bordered="false" class="mb-4">
                     <template #title>
@@ -476,6 +558,9 @@ onMounted(() => {
     border: 1px solid var(--ant-color-border-secondary, rgba(120, 120, 120, 0.25));
     transition: all 0.3s ease;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    min-height: 140px;
 }
 .package-card:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -517,5 +602,54 @@ onMounted(() => {
     padding: 40px;
     text-align: center;
     color: var(--color-text-secondary);
+}
+.preferred-coaches-list {
+    margin-top: 8px;
+}
+.preferred-coach-card {
+    padding: 16px;
+    background: var(--color-bg-container);
+    border-radius: 8px;
+    border: 1px solid var(--ant-color-border-secondary, rgba(120, 120, 120, 0.25));
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    min-height: 100px;
+}
+.preferred-coach-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--ant-color-primary);
+    transform: translateY(-2px);
+}
+.coach-header {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.coach-name {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--color-text);
+    margin-bottom: 12px;
+}
+.coach-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.coach-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+.coach-stat .stat-label {
+    color: var(--color-text-secondary);
+}
+.coach-stat .stat-value {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text);
 }
 </style>
