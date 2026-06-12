@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 import {
@@ -12,6 +12,7 @@ import {
     RangePicker as ARangePicker,
     Row as ARow,
     Select as ASelect,
+    SkeletonAvatar as ASkeletonAvatar,
     Space as ASpace,
     Spin as ASpin,
     Tag as ATag,
@@ -25,6 +26,7 @@ import {
     type AdminMemberQueryDTO,
 } from '#/api/member/member';
 import { normalizePageResult } from '#/api/_shared/page';
+import { batchGetFilePreviewApi } from '#/api/file';
 
 defineOptions({ name: 'MemberList' });
 
@@ -37,6 +39,12 @@ const keyword = ref('');
 const phoneFilter = ref('');
 const statusFilter = ref<number | undefined>(undefined);
 const registerTimeRange = ref<[string, string] | null>(null);
+
+/** 用户头像 fileId -> previewUrl */
+const avatarPreviewMap = reactive(new Map<string, string>());
+
+/** 正在加载中的用户头像 fileId */
+const avatarLoadingMap = reactive(new Set<string>());
 
 const statusOptions = [
     { label: '正常', value: 1 },
@@ -103,6 +111,79 @@ function formatMoney(amount: number): string {
     return `¥${(amount / 100).toFixed(2)}`;
 }
 
+function isFileId(value?: string | number | null): boolean {
+    if (value === null || value === undefined || value === '') {
+        return false;
+    }
+
+    const text = String(value);
+
+    if (text.startsWith('http://') || text.startsWith('https://')) {
+        return false;
+    }
+
+    return /^\d+$/.test(text) && Number(text) > 0;
+}
+
+function isAvatarLoading(avatar?: string | number | null): boolean {
+    if (!isFileId(avatar)) {
+        return false;
+    }
+
+    const fileId = String(avatar);
+
+    return avatarLoadingMap.has(fileId) && !avatarPreviewMap.has(fileId);
+}
+
+function getAvatarPreviewUrl(avatar?: string | number | null): string | undefined {
+    if (!avatar) {
+        return undefined;
+    }
+
+    const text = String(avatar);
+
+    if (text.startsWith('http://') || text.startsWith('https://')) {
+        return text;
+    }
+
+    if (isFileId(text)) {
+        return avatarPreviewMap.get(text);
+    }
+
+    return undefined;
+}
+
+async function loadAvatarPreviews() {
+    const fileIds: string[] = [];
+
+    for (const item of list.value) {
+        if (isFileId(item.avatar)) {
+            const fileId = String(item.avatar);
+            if (!avatarPreviewMap.has(fileId) && !avatarLoadingMap.has(fileId)) {
+                fileIds.push(fileId);
+                avatarLoadingMap.add(fileId);
+            }
+        }
+    }
+
+    if (fileIds.length === 0) {
+        return;
+    }
+
+    try {
+        const results = await batchGetFilePreviewApi({ fileIds });
+        for (const result of results) {
+            avatarPreviewMap.set(String(result.fileId), result.previewUrl);
+            avatarLoadingMap.delete(String(result.fileId));
+        }
+    } catch (error) {
+        console.error('加载头像预览失败:', error);
+        for (const fileId of fileIds) {
+            avatarLoadingMap.delete(fileId);
+        }
+    }
+}
+
 async function fetchList() {
     loading.value = true;
     try {
@@ -122,6 +203,8 @@ async function fetchList() {
         const normalized = normalizePageResult(res);
         list.value = normalized.list;
         pagination.value.total = normalized.total;
+
+        await loadAvatarPreviews();
     } finally {
         loading.value = false;
     }
@@ -219,9 +302,20 @@ onMounted(fetchList);
                     </a-table-column>
                     <a-table-column title="头像" width="70">
                         <template #default="{ record }">
-                            <a-avatar :src="record.avatar" :size="40">
-                                {{ (record.name || record.nickname || '用户')[0] }}
-                            </a-avatar>
+                            <div class="avatar-wrapper">
+                                <a-skeleton-avatar
+                                    v-if="isAvatarLoading(record.avatar)"
+                                    active
+                                    size="small"
+                                />
+                                <a-avatar
+                                    v-else
+                                    :size="40"
+                                    :src="getAvatarPreviewUrl(record.avatar)"
+                                >
+                                    {{ (record.name || record.nickname || '用户')[0] }}
+                                </a-avatar>
+                            </div>
                         </template>
                     </a-table-column>
                     <a-table-column title="姓名" data-index="name" width="100">
