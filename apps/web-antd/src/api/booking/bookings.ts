@@ -141,8 +141,11 @@ export interface AdminCreateBookingDTO {
     bookingDate?: string | null; // yyyy-MM-dd
     startTime?: string | null; // HH:mm:ss / HH:mm
     courseDuration?: number | null;
+    /** 扣次目标卡 id：独立课程卡=自身 id；组合卡=子卡 id */
     packageId?: string | null;
     packageName?: string | null;
+    /** 组合卡的父（虚拟容器）卡 id；仅当扣次发生在组合卡子卡时填写 */
+    parentPackageId?: string | null;
     status?: BookingStatus | number | null;
     remark?: string | null;
     operatorId?: string | null;
@@ -168,6 +171,7 @@ export interface AdminCancelBookingDTO {
     reason?: string | null;
     operatorId?: string | null;
     operatorName?: string | null;
+    restoreTimes: boolean | null; // 是否返还权益次数
 }
 
 /** 管理员更新预约状态 */
@@ -318,6 +322,7 @@ export async function createAdminBookingApi(data: AdminCreateBookingDTO): Promis
         venueId: data.venueId ? Number(data.venueId) : undefined,
         coachId: data.coachId ? Number(data.coachId) : undefined,
         packageId: data.packageId ? Number(data.packageId) : undefined,
+        parentPackageId: data.parentPackageId ? Number(data.parentPackageId) : undefined,
         operatorId: data.operatorId ? Number(data.operatorId) : undefined,
     };
     const res = await requestClient.post<any>(`${ADMIN_BOOKINGS_BASE}/create-manual`, payload);

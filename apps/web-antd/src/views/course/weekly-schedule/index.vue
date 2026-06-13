@@ -73,7 +73,14 @@
                 <template #bodyCell="{ column, record }">
                     <template v-if="column.dataIndex === 'coachName'">
                         <div class="coach-cell">
-                            <a-avatar :src="record.coachAvatar">
+                            <a-avatar
+                                :src="
+                                    coachAvatarPreviewMap.get(String(record.coachAvatar || '')) ||
+                                    (/^https?:\/\//.test(String(record.coachAvatar || ''))
+                                        ? record.coachAvatar
+                                        : undefined)
+                                "
+                            >
                                 {{ getCoachAvatarText(record.coachName) }}
                             </a-avatar>
 
@@ -348,39 +355,80 @@
                     </div>
                 </div>
 
-                <!-- 步骤2：选择课程 -->
+                <!-- 步骤2：选择课程（两层列表展示） -->
                 <div v-show="bookingStep === 1" class="step-content">
-                    <a-form layout="vertical">
-                        <a-form-item label="选择课程/套餐">
-                            <a-select
-                                v-model:value="bookingForm.packageId"
-                                placeholder="请选择课程或套餐"
-                                style="width: 100%"
-                                :loading="packageLoading"
-                            >
-                                <a-select-option
-                                    v-for="pkg in packageOptions"
-                                    :key="pkg.id"
-                                    :value="pkg.id"
+                    <div v-if="packageLoading" class="list-loading">
+                        <a-spin tip="加载权益卡中..."/>
+                    </div>
+
+                    <div v-else-if="packagesForDisplay.length === 0" class="empty-tip">
+                        该会员暂无可用的课程权益
+                    </div>
+
+                    <div v-else class="package-list">
+                        <template v-for="pkg in packagesForDisplay" :key="String(pkg.id)">
+                            <!-- 组合卡：可展开/收起；点击展开后展示子卡 -->
+                            <div v-if="String(pkg.cardType ?? '').toUpperCase().trim() === 'COMBO'" class="package-item combo-package">
+                                <div
+                                    class="package-row combo-header"
+                                    :class="{ expanded: expandedComboIds.has(String(pkg.id)) }"
+                                    @click="toggleComboExpand(String(pkg.id))"
                                 >
-                                    <div class="package-option">
-                                        <span class="package-name">
-                                            {{ pkg.parentName ? `${pkg.parentName} - ${pkg.packageName}` : pkg.packageName }}
-                                        </span>
-                                        <span class="package-tag" :class="{ 'sub-package': !!pkg.parentName }">
-                                            {{ pkg.parentName ? '组合卡子课' : '课程卡' }}
-                                        </span>
-                                        <span class="package-times">
-                                            剩余{{ pkg.courseRemainingTimes || 0 }}次
-                                        </span>
+                                    <span class="package-expand-icon">{{ expandedComboIds.has(String(pkg.id)) ? '▼' : '▶' }}</span>
+                                    <span class="package-title">{{ pkg.packageName || '组合卡' }}</span>
+                                    <a-tag color="blue" class="package-tag-sm">组合卡</a-tag>
+                                    <span class="package-count-hint">
+                                        {{ getCourseChildrenCount(pkg) }} 张可用课程子卡
+                                    </span>
+                                </div>
+                                <div v-if="expandedComboIds.has(String(pkg.id))" class="combo-children">
+                                    <template v-if="getCourseChildrenOfCombo(pkg).length > 0">
+                                        <div
+                                            v-for="subPkg in getCourseChildrenOfCombo(pkg)"
+                                            :key="String(subPkg.id)"
+                                            class="package-row course-child-row"
+                                            :class="{ selected: bookingForm.packageId === `${String(pkg.id)}_${String(subPkg.id)}` }"
+                                            @click="selectComboChildPackage(pkg, subPkg)"
+                                        >
+                                            <span class="package-child-dot">◆</span>
+                                            <span class="package-title">{{ subPkg.packageName || '课程卡' }}</span>
+                                            <span class="package-times">
+                                                剩余 {{ resolveCourseRemainingSafe(subPkg) }} 次
+                                            </span>
+                                            <template v-if="bookingForm.packageId === `${String(pkg.id)}_${String(subPkg.id)}`">
+                                                <a-tag color="green" class="selected-tag">已选择</a-tag>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <div v-else class="empty-children">
+                                        该组合卡下没有可用的课程子卡
                                     </div>
-                                </a-select-option>
-                            </a-select>
-                        </a-form-item>
-                        <div v-if="!packageLoading && packageOptions.length === 0" class="empty-tip">
-                            该会员暂无可用的课程权益
-                        </div>
-                    </a-form>
+                                </div>
+                            </div>
+
+                            <!-- 独立课程卡：直接点击选择 -->
+                            <div v-else-if="String(pkg.cardType ?? '').toUpperCase().trim() === 'COURSE'"
+                                 class="package-item standalone-course"
+                            >
+                                <div
+                                    class="package-row course-row"
+                                    :class="{ selected: bookingForm.packageId === String(pkg.id) }"
+                                    @click="selectStandalonePackage(pkg)"
+                                >
+                                    <span class="package-course-icon">📚</span>
+                                    <span class="package-title">{{ pkg.packageName || '课程卡' }}</span>
+                                    <a-tag class="package-tag-sm">课程卡</a-tag>
+                                    <span class="package-times">
+                                        剩余 {{ resolveCourseRemainingSafe(pkg) }} 次
+                                    </span>
+                                    <template v-if="bookingForm.packageId === String(pkg.id)">
+                                        <a-tag color="green" class="selected-tag">已选择</a-tag>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
                     <div class="step-actions">
                         <a-button @click="prevStep">上一步</a-button>
                         <a-button
@@ -406,7 +454,10 @@
                             {{ selectedDay?.date }}
                         </a-descriptions-item>
                         <a-descriptions-item label="预约时间">
-                            {{ selectedSlot?.startTime }} - {{ selectedSlot?.endTime }}
+                            {{ bookingTimeRange }}
+                        </a-descriptions-item>
+                        <a-descriptions-item label="课程时长">
+                            {{ selectedCourseDuration }} 分钟
                         </a-descriptions-item>
                         <a-descriptions-item label="课程/套餐">
                             {{ selectedPackageName }}
@@ -456,6 +507,7 @@ import type {
 import {getAdminScheduleDayDetailApi, getAdminScheduleOverviewApi, ScheduleConstants,} from '#/api/admin/schedule';
 
 import {getVenueOptionsApi} from '#/api/venue/create';
+import { batchGetFilePreviewApi } from '#/api/file';
 import {
     type MemberSearchRequest,
     type MemberSearchResultDTO,
@@ -491,6 +543,9 @@ const detailDrawerOpen = ref(false);
 /** ✅ 修复点：ID 改为 string，和 member.ts 一致 */
 const venueOptions = ref<Array<{ id: string; name: string }>>([]);
 
+/** 教练头像 fileId -> previewUrl */
+const coachAvatarPreviewMap = reactive(new Map<string, string>());
+
 const overview = ref<AdminScheduleOverviewVO | null>(null);
 
 const selectedCoach = ref<CoachScheduleRowVO | null>(null);
@@ -499,16 +554,24 @@ const selectedSlot = ref<AdminScheduleSlotVO | null>(null);
 
 // 预约创建弹窗
 const bookingModalOpen = ref(false);
-// 预约选项接口
+// 预约选项接口（扁平化的可选项，用于选中项查找、提交时的解析）
 interface BookingPackageOption {
+    /** 前端唯一 key。独立卡=packageId；组合卡子卡=parentPackageId_packageId */
     id: string;
+    /** 真正扣次的权益卡 id（独立课程卡=自身；组合卡=子卡） */
     packageId: string;
-    subPackageId?: string;
+    /** 组合卡父卡 id；仅在组合卡子卡场景下有值 */
+    parentPackageId?: string;
+    /** 显示的卡名；独立卡=卡名；组合卡=子卡名 */
     packageName: string;
+    /** 父卡名，仅用于 UI 拼接展示 */
     parentName?: string;
     courseRemainingTimes: number | null;
     cardType: string;
+    /** ROOT/CHILD/SINGLE */
     packageRole: string;
+    /** 课程时长（分钟），从权益卡模板/后端返回的 courseDuration 取 */
+    courseDuration?: number;
 }
 
 const bookingStep = ref(0);
@@ -518,6 +581,11 @@ const memberSearched = ref(false);
 const memberOptions = ref<MemberSearchResultDTO[]>([]);
 const packageOptions = ref<BookingPackageOption[]>([]);
 const packageLoading = ref(false);
+
+/** 用于两层列表展示：保留后端返回的原始卡结构（含 subPackages），过滤掉 VENUE */
+const packagesForDisplay = ref<any[]>([]);
+/** 已展开的组合卡 id 集合（用于控制列表展开状态） */
+const expandedComboIds = reactive(new Set<string>());
 
 let searchTimer: number | null = null;
 
@@ -731,6 +799,28 @@ async function handleSearch() {
         if (dateRange.value?.[0]) params.startDate = dateRange.value[0];
         if (dateRange.value?.[1]) params.endDate = dateRange.value[1];
         overview.value = await getAdminScheduleOverviewApi(params);
+
+        // 教练头像 fileId -> previewUrl
+        const coaches = overview.value?.coaches || [];
+        const fileIds: string[] = [];
+        coaches.forEach((coach) => {
+            const avatar = coach.coachAvatar;
+            if (avatar && /^\d+$/.test(String(avatar))) {
+                fileIds.push(String(avatar));
+            }
+        });
+
+        if (fileIds.length > 0) {
+            try {
+                const results = await batchGetFilePreviewApi({fileIds});
+                coachAvatarPreviewMap.clear();
+                results.forEach((item) => {
+                    coachAvatarPreviewMap.set(String(item.fileId), item.previewUrl);
+                });
+            } catch (e) {
+                console.error('批量获取教练头像失败:', e);
+            }
+        }
     } finally {
         loading.value = false;
     }
@@ -745,6 +835,14 @@ function handleReset() {
 async function loadVenueOptions() {
     try {
         venueOptions.value = await getVenueOptionsApi();
+
+        // 默认选择第一个场馆（用户未主动选择时）
+        if (
+            (queryForm.venueId === undefined || queryForm.venueId === null || queryForm.venueId === '') &&
+            venueOptions.value.length > 0
+        ) {
+            queryForm.venueId = venueOptions.value[0].id;
+        }
     } catch (e) {
         console.error('加载场馆列表失败:', e);
     }
@@ -782,14 +880,45 @@ async function handleOpenDayDetail(coach: CoachScheduleRowVO, day?: CoachDaySche
 // ==================== 预约创建相关 ====================
 
 const selectedMemberName = computed(() => {
-    const member = memberOptions.value.find((m) => m.id === bookingForm.memberId);
+    const member = memberOptions.value.find((m) => String(m.id) === String(bookingForm.memberId));
     return member?.name || member?.nickname || '-';
 });
 
 const selectedPackageName = computed(() => {
-    const pkg = packageOptions.value.find((p) => p.id === bookingForm.packageId);
+    const pkg = packageOptions.value.find((p) => String(p.id) === String(bookingForm.packageId));
     if (!pkg) return '-';
     return pkg.parentName ? `${pkg.parentName} - ${pkg.packageName}` : pkg.packageName;
+});
+
+/**
+ * 选中的课程时长（分钟）：
+ * - 优先使用权益卡模板返回的 courseDuration
+ * - 若未返回，则用当前 slot 的 endTime - startTime 兜底
+ */
+const selectedCourseDuration = computed(() => {
+    const pkg = packageOptions.value.find((p) => String(p.id) === String(bookingForm.packageId));
+    if (pkg && typeof pkg.courseDuration === 'number' && pkg.courseDuration > 0) {
+        return pkg.courseDuration;
+    }
+    if (selectedSlot.value) {
+        const start = dayjs(selectedSlot.value.startTime, 'HH:mm');
+        const end = dayjs(selectedSlot.value.endTime, 'HH:mm');
+        return end.diff(start, 'minute');
+    }
+    return 0;
+});
+
+/**
+ * 预约时间范围：startTime + courseDuration -> 结束时间
+ * 例：10:00 + 45分钟 -> "10:00 - 10:45"
+ */
+const bookingTimeRange = computed(() => {
+    if (!selectedSlot.value) return '-';
+    const startTime = selectedSlot.value.startTime;
+    const start = dayjs(startTime, 'HH:mm');
+    const end = start.add(selectedCourseDuration.value, 'minute');
+    const endTime = end.format('HH:mm');
+    return `${startTime} - ${endTime}`;
 });
 
 async function handleMemberSearch(value: string) {
@@ -862,49 +991,155 @@ function getMatchTypeText(matchType: string) {
 }
 
 /**
- * 处理会员权益卡数据，转换为预约选项格式
- * - 单独课程卡直接展示
- * - 组合卡需要展开子卡展示课程信息
+ * 安全获取「课程剩余次数」
+ * - 优先取 courseRemainingTimes
+ * - 若缺失/null，则用 courseTotalTimes - courseUsedTimes 兜底
+ */
+function resolveCourseRemaining(pkg: {
+    courseRemainingTimes?: number | null;
+    courseTotalTimes?: number | null;
+    courseUsedTimes?: number;
+}): number {
+    if (typeof pkg.courseRemainingTimes === 'number' && Number.isFinite(pkg.courseRemainingTimes)) {
+        return pkg.courseRemainingTimes;
+    }
+    const total = typeof pkg.courseTotalTimes === 'number' ? pkg.courseTotalTimes : 0;
+    const used = typeof pkg.courseUsedTimes === 'number' ? pkg.courseUsedTimes : 0;
+    return Math.max(0, total - used);
+}
+
+/** 模板中使用：返回剩余次数的字符串；和 resolveCourseRemaining 逻辑一致 */
+function resolveCourseRemainingSafe(pkg: any): number {
+    return resolveCourseRemaining(pkg || {});
+}
+
+/** 获取组合卡下的 COURSE 类型子卡数组（仅剩余次数 > 0 的） */
+function getCourseChildrenOfCombo(comboPkg: any): any[] {
+    const subPackages = Array.isArray((comboPkg as any)?.subPackages)
+        ? (comboPkg as any).subPackages
+        : [];
+    return subPackages.filter((sub: any) => {
+        const cardType = String((sub as any).cardType ?? '').toUpperCase().trim();
+        if (cardType !== 'COURSE') return false;
+        const remaining = resolveCourseRemainingSafe(sub);
+        return remaining > 0;
+    });
+}
+
+/** 组合卡：返回可用子卡数量 */
+function getCourseChildrenCount(comboPkg: any): number {
+    return getCourseChildrenOfCombo(comboPkg).length;
+}
+
+/** 切换组合卡展开/收起状态 */
+function toggleComboExpand(comboId: string) {
+    if (expandedComboIds.has(comboId)) {
+        expandedComboIds.delete(comboId);
+    } else {
+        expandedComboIds.add(comboId);
+    }
+}
+
+/** 选择独立课程卡：设置 packageId 为其自身 id */
+function selectStandalonePackage(pkg: any) {
+    bookingForm.packageId = String(pkg.id);
+    console.log(`[选择课程卡] id=${bookingForm.packageId}, name=${pkg.packageName}`);
+}
+
+/** 选择组合卡子卡：设置 packageId 为 `${父卡id}_${子卡id}` */
+function selectComboChildPackage(comboPkg: any, subPkg: any) {
+    bookingForm.packageId = `${String(comboPkg.id)}_${String(subPkg.id)}`;
+    console.log(`[选择组合卡子卡] id=${bookingForm.packageId}, parent=${comboPkg.packageName}, child=${subPkg.packageName}`);
+}
+
+/**
+ * 处理会员权益卡数据，转换为预约选项格式（精确匹配 cardType 枚举）
+ *  - VENUE：场地卡，不用于约课，直接跳过
+ *  - COMBO：组合卡，必须展开子卡，只取 COURSE 类型的子卡
+ *  - COURSE：独立课程卡，直接加入选项
+ *  - courseRemainingTimes 为 null/undefined 时，使用 courseTotalTimes - courseUsedTimes 兜底
  */
 function processPackagesToBookingOptions(packages: AdminMemberPackageListDTO[]): BookingPackageOption[] {
     const options: BookingPackageOption[] = [];
 
     for (const pkg of packages) {
-        // 只处理课程相关的权益
-        if (pkg.cardType !== 'COURSE' && pkg.cardType !== 'COMBO') continue;
+        // 精确匹配：cardType 应为 'VENUE' | 'COMBO' | 'COURSE'
+        const cardType = String(pkg.cardType ?? '').toUpperCase().trim();
 
-        // 跳过没有剩余次数的权益
-        if (!pkg.courseRemainingTimes || pkg.courseRemainingTimes <= 0) continue;
+        if (cardType === 'VENUE') {
+            // VENUE 场地卡 — 不用于约课，跳过
+            continue;
+        }
 
-        if (pkg.cardType === 'COMBO' && pkg.packageRole === 'ROOT' && pkg.subPackages?.length) {
-            // 组合卡：展开子卡
-            for (const subPkg of pkg.subPackages) {
-                // 子卡必须是课程类型且有剩余次数
-                if (subPkg.cardType !== 'COURSE') continue;
-                if (!subPkg.courseRemainingTimes || subPkg.courseRemainingTimes <= 0) continue;
+        if (cardType === 'COMBO') {
+            // COMBO 组合卡 — 必须展开子卡，只取 COURSE 类型的子卡
+            const subPackages =
+                (Array.isArray((pkg as any)?.subPackages) && (pkg as any).subPackages.length > 0)
+                    ? (pkg as any).subPackages
+                    : (Array.isArray((pkg as any)?.children) && (pkg as any).children.length > 0)
+                        ? (pkg as any).children
+                        : (Array.isArray((pkg as any)?.childPackages) && (pkg as any).childPackages.length > 0)
+                            ? (pkg as any).childPackages
+                            : [];
+
+            if (subPackages.length === 0) {
+                console.warn(
+                    `[booking] 组合卡「${pkg.packageName ?? pkg.id}」(cardType=COMBO) 没有返回子卡(subPackages)，` +
+                        `无法确定扣次目标，已跳过。建议后端返回组合卡的子卡数组。`,
+                );
+                continue;
+            }
+
+            for (const subPkg of subPackages) {
+                const subCardType = String((subPkg as any).cardType ?? '').toUpperCase().trim();
+
+                // 子卡必须是 COURSE 类型才加入（VENUE 子卡也跳过）
+                if (subCardType !== 'COURSE') continue;
+
+                const remaining = resolveCourseRemaining({
+                    courseRemainingTimes: (subPkg as any).courseRemainingTimes,
+                    courseTotalTimes: (subPkg as any).courseTotalTimes,
+                    courseUsedTimes: (subPkg as any).courseUsedTimes,
+                });
+                if (remaining <= 0) continue;
 
                 options.push({
-                    id: `${pkg.id}_${subPkg.id}`,
-                    packageId: pkg.id,
-                    subPackageId: subPkg.id,
-                    packageName: subPkg.packageName,
+                    id: `${String(pkg.id)}_${String(subPkg.id)}`,
+                    packageId: String(subPkg.id),        // 扣次目标 = 子卡 ID
+                    parentPackageId: String(pkg.id),     // 组合卡父卡 ID = 虚拟容器 ID
+                    packageName: subPkg.packageName || '子卡',
                     parentName: pkg.packageName,
-                    courseRemainingTimes: subPkg.courseRemainingTimes,
-                    cardType: subPkg.cardType,
-                    packageRole: subPkg.packageRole,
+                    courseRemainingTimes: remaining,
+                    cardType: subCardType,
+                    packageRole: String((subPkg as any).packageRole ?? 'CHILD'),
+                    courseDuration: (subPkg as any).courseDuration,
                 });
             }
-        } else if (pkg.cardType === 'COURSE') {
-            // 单独课程卡
-            options.push({
-                id: pkg.id,
-                packageId: pkg.id,
-                packageName: pkg.packageName,
-                courseRemainingTimes: pkg.courseRemainingTimes,
-                cardType: pkg.cardType,
-                packageRole: pkg.packageRole,
-            });
+            continue;
         }
+
+        if (cardType === 'COURSE') {
+            // COURSE 独立课程卡 — 直接加入选项
+            const remaining = resolveCourseRemaining(pkg);
+            if (remaining <= 0) continue;
+
+            options.push({
+                id: String(pkg.id),
+                packageId: String(pkg.id),
+                packageName: pkg.packageName,
+                courseRemainingTimes: remaining,
+                cardType: cardType,
+                packageRole: String((pkg as any).packageRole ?? 'SINGLE'),
+                courseDuration: (pkg as any).courseDuration,
+            });
+            continue;
+        }
+
+        // 未知 cardType — 打印警告并跳过
+        console.warn(
+            `[booking] 未知 cardType="${cardType}"，权益卡「${pkg.packageName ?? pkg.id}」已跳过。` +
+                `期望的值为: VENUE, COMBO, COURSE`,
+        );
     }
 
     return options;
@@ -915,23 +1150,46 @@ async function nextStep() {
         packageLoading.value = true;
         bookingForm.packageId = undefined;
 
+        // 🔍 关键诊断：打印会员 ID 的类型和值
+        console.log('%c[booking-nextStep] === 开始获取权益卡 ===', 'background:#1976d2;color:#fff;font-weight:bold;padding:4px 8px;');
+        console.log(`[booking-nextStep] 当前会员 ID 值:`, bookingForm.memberId);
+        console.log(`[booking-nextStep] 当前会员 ID 类型:`, typeof bookingForm.memberId);
+        console.log(`[booking-nextStep] String(会员ID) =`, String(bookingForm.memberId));
+
+        // 查找当前会员名称
+        const currentMember = memberOptions.value.find((m) => String(m.id) === String(bookingForm.memberId));
+        console.log(`[booking-nextStep] 当前匹配到的会员:`, currentMember);
+
         try {
-            const packages = await getAdminPackagesByMemberIdApi(bookingForm.memberId);
-            // 处理权益卡数据：单独课程卡直接展示，组合卡展开子卡
+            const packages = await getAdminPackagesByMemberIdApi(String(bookingForm.memberId));
+
+            // 处理权益卡数据
+            // 1. packagesForDisplay：保留原始层级，仅过滤 VENUE（用于两层列表展示）
+            packagesForDisplay.value = (packages || []).filter(
+                (pkg: any) => String(pkg.cardType ?? '').toUpperCase().trim() !== 'VENUE',
+            );
+            // 2. packageOptions：扁平化选项（独立卡 + 组合卡子卡），用于 selectedPackageName 和 submitBooking 查找
             packageOptions.value = processPackagesToBookingOptions(packages || []);
+
+            // 重置展开状态和选择
+            expandedComboIds.clear();
+            bookingForm.packageId = undefined;
 
             if (packageOptions.value.length === 0) {
                 message.warning('该会员暂无可用的课程权益');
             }
         } catch (e) {
+            console.error('[booking-nextStep] 获取会员权益异常:', e);
             message.error('获取会员权益失败');
             packageOptions.value = [];
+            packagesForDisplay.value = [];
         } finally {
             packageLoading.value = false;
         }
 
         bookingStep.value = 1;
     } else if (bookingStep.value === 1 && bookingForm.packageId) {
+        console.log('[booking-nextStep] 选择的课程 ID:', bookingForm.packageId, '类型:', typeof bookingForm.packageId);
         bookingStep.value = 2;
     }
 }
@@ -949,6 +1207,8 @@ function openBookingModal(slot: AdminScheduleSlotVO) {
     bookingForm.packageId = undefined;
     bookingStep.value = 0;
     packageOptions.value = [];
+    packagesForDisplay.value = [];
+    expandedComboIds.clear();
     memberSearched.value = false;
     memberOptions.value = [];
     bookingModalOpen.value = true;
@@ -965,24 +1225,24 @@ async function submitBooking() {
         return;
     }
 
-    // 解析选择的权益卡信息
-    const selectedPkg = packageOptions.value.find((p) => p.id === bookingForm.packageId);
+    // 解析选择的权益卡信息（String 化比较，防止 number/string 类型漂移）
+    const selectedPkg = packageOptions.value.find((p) => String(p.id) === String(bookingForm.packageId));
     if (!selectedPkg) {
         message.warning('请选择有效的权益卡');
         return;
     }
 
     // 获取会员信息
-    const selectedMember = memberOptions.value.find((m) => m.id === bookingForm.memberId);
+    const selectedMember = memberOptions.value.find((m) => String(m.id) === String(bookingForm.memberId));
 
-    // 计算课程时长（分钟）
-    const start = dayjs(selectedSlot.value.startTime, 'HH:mm');
-    const end = dayjs(selectedSlot.value.endTime, 'HH:mm');
-    const courseDuration = end.diff(start, 'minute');
+    // 课程时长（分钟）：优先使用权益卡模板返回的 courseDuration；与步骤3展示保持一致
+    const courseDuration: number = selectedCourseDuration.value;
 
     submitLoading.value = true;
     try {
         // 构建预约请求参数
+        // - 独立课程卡：packageId = 自身 id；parentPackageId = undefined
+        // - 组合卡子卡：packageId = 子卡 id（扣次目标）；parentPackageId = 父卡 id（虚拟容器）
         const bookingData: AdminCreateBookingDTO = {
             memberId: bookingForm.memberId,
             memberName: selectedMember?.name || selectedMember?.nickname || undefined,
@@ -992,9 +1252,14 @@ async function submitBooking() {
             startTime: selectedSlot.value.startTime,
             courseDuration: courseDuration,
             packageId: selectedPkg.packageId,
-            packageName: selectedPkg.packageName,
-            status: 1, // 1-已预约/待确认
+            packageName: selectedPkg.parentName
+                ? `${selectedPkg.parentName} - ${selectedPkg.packageName}`
+                : selectedPkg.packageName,
+            parentPackageId: selectedPkg.parentPackageId, // 仅组合卡场景有值
+            status: 2, // 管理后台一般默认为已确认
         };
+
+        console.log('[booking-submit] payload:', bookingData);
 
         // 调用创建预约API
         await createAdminBookingApi(bookingData);
@@ -1006,6 +1271,7 @@ async function submitBooking() {
             await handleOpenDayDetail(selectedCoach.value, selectedDay.value);
         }
     } catch (e) {
+        console.error('[booking-submit] error:', e);
         message.error('预约创建失败');
     } finally {
         submitLoading.value = false;
@@ -1417,7 +1683,7 @@ onMounted(async () => {
     justify-content: space-between;
     margin-top: 24px;
     padding-top: 16px;
-    border-top: 1px solid var(--sv-border);
+    border-top: 1px solid var(--ant-color-border-secondary, rgba(120, 120, 120, 0.25));
 }
 
 .member-option {
@@ -1425,6 +1691,7 @@ onMounted(async () => {
     align-items: center;
     gap: 12px;
     width: 100%;
+    /* 不强制设置文字颜色，让 a-select 自己管理（其下拉项在明/暗主题下自动适配） */
 }
 
 .package-option {
@@ -1437,23 +1704,23 @@ onMounted(async () => {
 .package-name {
     font-weight: 500;
     flex: 1;
+    /* 不强制设置文字颜色 */
 }
 
 .package-tag {
     font-size: 11px;
     padding: 2px 6px;
     border-radius: 4px;
-    background: #e6f4ff;
-    color: #1677ff;
+    /* 让 a-tag 的默认主题色生效，不再硬编码 */
 }
 
 .package-tag.sub-package {
-    background: #fff7e6;
-    color: #fa8c16;
+    background: var(--ant-color-warning-bg, rgba(250, 140, 22, 0.08));
+    color: var(--ant-color-warning, #fa8c16);
 }
 
 .package-times {
-    color: var(--sv-text-secondary, #999);
+    color: var(--ant-color-text-secondary, #999);
     font-size: 12px;
     flex: 0 0 auto;
 }
@@ -1461,12 +1728,13 @@ onMounted(async () => {
 .member-name {
     font-weight: 500;
     flex: 0 0 auto;
+    /* 不强制设置颜色，继承 a-select 的主题色 */
 }
 
 .member-phone {
-    color: var(--sv-text-secondary);
     font-size: 12px;
     flex: 1;
+    /* 不强制设置颜色 */
 }
 
 .match-type-tag {
@@ -1474,9 +1742,10 @@ onMounted(async () => {
 }
 
 .search-hint {
-    color: var(--sv-text-secondary, #999);
     font-size: 12px;
     margin-top: 8px;
+    /* 不强制设置颜色，继承页面次级文字色 */
+    color: var(--ant-color-text-secondary);
 }
 
 .search-hint :deep(svg) {
@@ -1485,6 +1754,151 @@ onMounted(async () => {
 
 .mb-6 {
     margin-bottom: 24px;
+}
+
+/* ============ 权益卡两层列表样式（适配黑/白主题） ============ */
+.list-loading {
+    padding: 24px 0;
+    text-align: center;
+}
+
+.empty-tip {
+    padding: 24px 0;
+    text-align: center;
+    color: var(--ant-color-text-secondary);
+    font-size: 13px;
+}
+
+.package-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.package-item {
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--ant-color-border-secondary);
+    background: transparent;
+    transition: border-color 0.15s ease;
+}
+
+.package-item:hover {
+    border-color: var(--ant-color-primary);
+}
+
+.package-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.package-row:hover {
+    background: rgba(22, 119, 255, 0.06);
+}
+
+.package-row.selected {
+    background: transparent;
+    border-left: 3px solid var(--ant-color-primary);
+    padding-left: 9px;
+    font-weight: 500;
+}
+
+.package-expand-icon {
+    font-size: 12px;
+    color: var(--ant-color-text-secondary);
+    width: 16px;
+    flex: 0 0 16px;
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+
+.package-course-icon {
+    font-size: 16px;
+    width: 18px;
+    flex: 0 0 18px;
+    text-align: center;
+}
+
+.package-child-dot {
+    font-size: 10px;
+    color: var(--ant-color-primary);
+    width: 14px;
+    flex: 0 0 14px;
+    text-align: center;
+}
+
+.package-title {
+    flex: 1;
+    font-weight: 500;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.package-tag-sm {
+    flex: 0 0 auto;
+    font-size: 11px !important;
+}
+
+.package-count-hint {
+    flex: 0 0 auto;
+    font-size: 12px;
+    color: var(--ant-color-text-secondary);
+}
+
+.package-times {
+    flex: 0 0 auto;
+    color: var(--ant-color-text-secondary);
+    font-size: 12px;
+}
+
+.selected-tag {
+    flex: 0 0 auto;
+    font-size: 11px !important;
+    margin-left: 4px;
+}
+
+.combo-header {
+    font-weight: 500;
+    background: transparent;
+}
+
+.combo-header.expanded {
+    background: transparent;
+}
+
+.combo-header.expanded .package-expand-icon {
+    transform: rotate(90deg);
+}
+
+.combo-children {
+    border-top: 1px dashed var(--ant-color-border-secondary);
+    background: transparent;
+}
+
+.course-child-row {
+    padding-left: 36px;
+}
+
+.course-child-row:hover {
+    background: rgba(22, 119, 255, 0.06);
+}
+
+.course-row {
+    background: transparent;
+}
+
+.empty-children {
+    padding: 10px 36px;
+    font-size: 12px;
+    color: var(--ant-color-text-secondary);
+    font-style: italic;
 }
 </style>
 

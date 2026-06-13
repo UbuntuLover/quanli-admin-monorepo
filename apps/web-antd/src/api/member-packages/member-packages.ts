@@ -42,6 +42,7 @@ export interface AdminMemberPackageListDTO {
     endDate?: string | null;
     remainingDays?: number | null;
     courseTotalTimes?: number | null;
+    courseDuration?: number | null;
     courseRemainingTimes?: number | null;
     courseUsedTimes: number;
     venueTotalTimes?: number | null;
@@ -205,7 +206,7 @@ function normalizeGrantResponse(res: any): AdminGrantPackageResponse {
  * API
  * ========================= */
 
-export function getAdminMemberPackageListApi(params: AdminMemberPackageQueryDTO) {
+export async function getAdminMemberPackageListApi(params: AdminMemberPackageQueryDTO) {
     return requestClient
         .get<PageResult<AdminMemberPackageListDTO>>(`${ADMIN_MEMBER_PACKAGES_BASE}/list`, {
             params: {
@@ -225,13 +226,13 @@ export function getAdminMemberPackageListApi(params: AdminMemberPackageQueryDTO)
         });
 }
 
-export function getAdminMemberPackageDetailApi(id: string) {
+export async function getAdminMemberPackageDetailApi(id: string) {
     return requestClient
         .get<AdminMemberPackageDetailDTO>(`${ADMIN_MEMBER_PACKAGES_BASE}/${String(id)}`)
         .then((res: any) => normalizeDetail(res));
 }
 
-export function getAdminPackagesByMemberIdApi(memberId: string) {
+export async function getAdminPackagesByMemberIdApi(memberId: string) {
     return requestClient
         .get<AdminMemberPackageListDTO[]>(`${ADMIN_MEMBER_PACKAGES_BASE}/member/${String(memberId)}`)
         .then((list: any[]) => (Array.isArray(list) ? list.map(normalizeListItem) : []));
