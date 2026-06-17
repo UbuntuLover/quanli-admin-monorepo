@@ -51,6 +51,6 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
-    "unplugin-vue-components": "^32.0.0"
+    "unplugin-vue-components": "^32.1.0"
   }
 }
