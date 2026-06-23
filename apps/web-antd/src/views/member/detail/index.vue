@@ -259,21 +259,23 @@ onMounted(() => {
                         <span class="text-base font-semibold">基本信息</span>
                     </template>
 
-                    <a-row :gutter="24">
+                    <a-row :gutter="24" align="middle">
                         <!-- 左侧头像区域 -->
-                        <a-col :xs="24" :md="6" class="text-center">
-                            <a-avatar :src="avatarPreviewUrl || memberDetail.avatar" :size="120">
-                                {{ (memberDetail.name || memberDetail.nickname || '用户')[0] }}
-                            </a-avatar>
-                            <div class="mt-4">
-                                <a-tag :color="statusColor(memberDetail.status)" class="text-sm">
-                                    {{ statusText(memberDetail.status) }}
-                                </a-tag>
+                        <a-col :xs="24" :md="8" class="avatar-section">
+                            <div class="avatar-wrapper">
+                                <a-avatar :src="avatarPreviewUrl || memberDetail.avatar" :size="120">
+                                    {{ (memberDetail.name || memberDetail.nickname || '用户')[0] }}
+                                </a-avatar>
+                                <div class="avatar-status">
+                                    <a-tag :color="statusColor(memberDetail.status)" class="text-sm">
+                                        {{ statusText(memberDetail.status) }}
+                                    </a-tag>
+                                </div>
                             </div>
                         </a-col>
 
                         <!-- 右侧信息区域 -->
-                        <a-col :xs="24" :md="18">
+                        <a-col :xs="24" :md="16">
                             <a-descriptions :column="2" bordered>
                                 <a-descriptions-item label="会员编号">
                                     {{ memberDetail.memberNo }}
@@ -528,6 +530,27 @@ onMounted(() => {
 .member-detail-page {
     width: 100%;
 }
+
+/* 基本信息 - 头像区域居中 */
+.avatar-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.avatar-status {
+    margin-top: 4px;
+}
+
 .stat-item {
     padding: 16px;
     text-align: center;

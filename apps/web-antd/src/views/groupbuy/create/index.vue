@@ -62,7 +62,7 @@ const formState = ref<CreateGroupBuyActivityRequest>({
     startTime: '',
     endTime: '',
     expireHours: 24,
-    lotteryType: 'GROUP_PRICE' as GroupBuyLotteryType,
+    lotteryType: 'RANDOM_ONE' as GroupBuyLotteryType,
     autoGroupEnabled: 0,
     refundDeadLineType: 'AFTER_GROUP' as GroupBuyRefundDeadlineType, // 默认成团后不可退款
 });

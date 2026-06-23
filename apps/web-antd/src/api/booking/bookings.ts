@@ -359,7 +359,7 @@ export function updateAdminBookingStatusApi(data: AdminUpdateBookingStatusDTO) {
         bookingId: data.bookingId ? Number(data.bookingId) : undefined,
         operatorId: data.operatorId ? Number(data.operatorId) : undefined,
     };
-    return requestClient.post(`${ADMIN_BOOKINGS_BASE}/update-status`, payload);
+    return requestClient.post(`${ADMIN_BOOKINGS_BASE}/status`, payload);
 }
 
 /*  管理员手动处理爽约*/

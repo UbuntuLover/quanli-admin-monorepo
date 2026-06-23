@@ -172,7 +172,6 @@ function getStatusColor(status: BookingStatus | number | undefined): string {
 async function fetchDetail(id: string) {
     loading.value = true;
     try {
-        debugger
         bookingDetail.value = await getAdminBookingDetailApi(id);
     } catch (e: any) {
         await message.error(e?.message || '获取预约详情失败');

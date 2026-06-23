@@ -223,6 +223,21 @@
                                         </div>
                                     </template>
                                 </a-list-item-meta>
+
+                                <template #actions>
+                                    <a-dropdown trigger="click" placement="bottomRight">
+                                        <a-button size="small" type="text">
+                                            <MoreOutlined/>
+                                        </a-button>
+                                        <template #overlay>
+                                            <a-menu>
+                                                <a-menu-item key="cancel" @click="handleCancelBooking(item)">
+                                                    <span style="color: var(--ant-color-error);">取消预约</span>
+                                                </a-menu-item>
+                                            </a-menu>
+                                        </template>
+                                    </a-dropdown>
+                                </template>
                             </a-list-item>
                         </template>
                     </a-list>
@@ -261,7 +276,7 @@
                             >
                                 <div>{{ slot.memberName || '未知会员' }}</div>
                                 <div class="slot-sub-text">
-                                    {{ slot.bookingNo || '-' }}
+                                    {{ slot.packageName || '-' }}
                                 </div>
                             </div>
 
@@ -516,11 +531,11 @@ import {
 
 import { getAdminPackagesByMemberIdApi, type AdminMemberPackageListDTO } from '#/api/member-packages/member-packages';
 
-import { createAdminBookingApi, type AdminCreateBookingDTO } from '#/api/booking/bookings';
+import { createAdminBookingApi, cancelAdminBookingApi, type AdminCreateBookingDTO } from '#/api/booking/bookings';
 
 import {normalizePageResult} from "#/api/_shared/page";
 
-import {InfoCircleOutlined, SearchOutlined} from '@ant-design/icons-vue';
+import {InfoCircleOutlined, MoreOutlined, SearchOutlined} from '@ant-design/icons-vue';
 
 import dayjs from 'dayjs';
 import {computed, defineComponent, h, onMounted, reactive, ref} from 'vue';
@@ -1278,6 +1293,45 @@ async function submitBooking() {
     }
 }
 
+/**
+ * 取消预约
+ * - 点击预约条目上的三点菜单中的"取消预约"
+ * - 弹确认框 → 调用 cancelAdminBookingApi → 刷新当天数据
+ */
+async function handleCancelBooking(booking: any) {
+    const bookingId = booking?.bookingId ?? booking?.id ?? booking?.bookingNo;
+    if (!bookingId) {
+        message.warning('无法识别该预约，无法取消');
+        return;
+    }
+
+    AModal.confirm({
+        title: '确认取消预约',
+        content: `确认取消 ${booking.memberName || '该会员'} 的预约吗？取消后将返还对应权益次数。`,
+        okText: '确认取消',
+        okButtonProps: { danger: true },
+        cancelText: '不取消',
+        async onOk() {
+            try {
+                await cancelAdminBookingApi({
+                    bookingId: String(bookingId),
+                    reason: '管理员手动取消',
+                    restoreTimes: true, // 默认返还次数
+                });
+                message.success('已取消预约');
+
+                // 刷新当前教练 + 当天的排课数据
+                if (selectedCoach.value && selectedDay.value) {
+                    await handleOpenDayDetail(selectedCoach.value, selectedDay.value);
+                }
+            } catch (e) {
+                console.error('[cancel-booking] error:', e);
+                message.error('取消预约失败');
+            }
+        },
+    });
+}
+
 onMounted(async () => {
     await loadVenueOptions();
     handleSearch();
@@ -1609,21 +1663,28 @@ onMounted(async () => {
     background: var(--sv-bg-card);
     border: 1px solid var(--sv-border);
     border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.slot-item:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
 }
 
 .slot-available {
-    background: var(--sv-ok-bg);
-    border-color: var(--sv-ok-border);
+    background: linear-gradient(135deg, rgba(82, 196, 26, 0.15) 0%, rgba(82, 196, 26, 0.08) 100%);
+    border-color: rgba(82, 196, 26, 0.3);
 }
 
 .slot-booked {
-    background: var(--sv-book-bg);
-    border-color: var(--sv-book-border);
+    background: linear-gradient(135deg, rgba(250, 173, 20, 0.18) 0%, rgba(250, 173, 20, 0.1) 100%);
+    border-color: rgba(250, 173, 20, 0.4);
 }
 
 .slot-blocked {
-    background: var(--sv-warn-bg);
-    border-color: var(--sv-warn-border);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.08) 100%);
+    border-color: rgba(239, 68, 68, 0.3);
 }
 
 .slot-time {

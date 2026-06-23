@@ -22,6 +22,16 @@ const routes: RouteRecordRaw[] = [
                 },
             },
             {
+                name: 'CourseScheduleHistory',
+                path: '/course/schedule-history',
+                component: () => import('#/views/course/schedule-history/index.vue'),
+                meta: {
+                    icon: 'lucide:history',
+                    keepAlive: true,
+                    title: '历史排班记录',
+                },
+            },
+            {
                 name: 'CourseBookingList',
                 path: '/course/booking-list',
                 component: () => import('#/views/course/booking-list/index.vue'),
