@@ -30,6 +30,8 @@ import {
 } from '#/api/template/template';
 import {getAllVenuesApi, type VenueDetailDTO} from '#/api/venue/list';
 import {type CategoryDTO, getCategoryTreeApi} from '#/api/products/productCategory';
+import {MediaUpload} from '#/components/upload';
+import type {MediaItem} from '#/components/upload';
 
 type CardType = 'COURSE' | 'VENUE';
 type PackageMode = 'SINGLE' | 'COMBO';
@@ -78,8 +80,8 @@ const baseForm = reactive({
     brandId: '',
     subtitle: '',
     description: '',
-    mainImage: '',
-    detailImagesText: '',
+    mainImage: null as MediaItem | null,
+    detailImages: [] as MediaItem[],
 
     deliveryMode: 'MANUAL_ACTIVATE' as 'DIRECT' | 'MANUAL_ACTIVATE',
     isNew: 0,
@@ -91,6 +93,11 @@ const baseForm = reactive({
 
     // SKU属性：动态键值对
     attributesKv: [{ key: '', value: '' }] as KvItem[],
+
+    // 续费配置
+    allowRenewal: 0,
+    renewalWindowDaysBeforeExpire: 7,
+    renewalGraceDaysAfterExpire: 3,
 });
 
 // 单卡专属
@@ -333,13 +340,17 @@ async function submitSingle() {
         venueBenefitType: isVenue.value ? singleForm.venueBenefitType ?? null : null,
         venueTimes: isVenue.value ? singleForm.venueTimes ?? null : null,
 
+        allowRenewal: baseForm.allowRenewal,
+        renewalWindowDaysBeforeExpire: baseForm.renewalWindowDaysBeforeExpire,
+        renewalGraceDaysAfterExpire: baseForm.renewalGraceDaysAfterExpire,
+
         productName: baseForm.productName.trim(),
         categoryId: getCategoryId(),
         brandId: baseForm.brandId ?? null,
         subtitle: baseForm.subtitle || null,
         description: baseForm.description || null,
-        mainImage: baseForm.mainImage || null,
-        detailImages: parseStringArray(baseForm.detailImagesText) ?? null,
+        mainImage: baseForm.mainImage?.url || null,
+        detailImages: baseForm.detailImages.length > 0 ? baseForm.detailImages.map(img => img.url) : null,
 
         deliveryMode: baseForm.deliveryMode,
         isNew: baseForm.isNew,
@@ -388,13 +399,17 @@ async function submitCombo() {
 
         children: normalizedChildren,
 
+        allowRenewal: baseForm.allowRenewal,
+        renewalWindowDaysBeforeExpire: baseForm.renewalWindowDaysBeforeExpire,
+        renewalGraceDaysAfterExpire: baseForm.renewalGraceDaysAfterExpire,
+
         productName: baseForm.productName.trim(),
         categoryId: getCategoryId(),
         brandId: baseForm.brandId ?? null,
         subtitle: baseForm.subtitle || null,
         description: baseForm.description || null,
-        mainImage: baseForm.mainImage || null,
-        detailImages: parseStringArray(baseForm.detailImagesText) ?? null,
+        mainImage: baseForm.mainImage?.url || null,
+        detailImages: baseForm.detailImages.length > 0 ? baseForm.detailImages.map(img => img.url) : null,
 
         deliveryMode: baseForm.deliveryMode,
         isNew: baseForm.isNew,
@@ -494,7 +509,25 @@ onMounted(() => {
                     </a-col>
                 </a-row>
 
-                <a-row v-if="activeTab === 'SINGLE'" :gutter="16">
+                <a-row :gutter="16">
+                        <a-col :span="8">
+                            <a-form-item label="是否允许续费">
+                                <a-switch :checked="baseForm.allowRenewal === 1" @change="(checked:boolean)=>baseForm.allowRenewal = checked ? 1 : 0" />
+                            </a-form-item>
+                        </a-col>
+                        <a-col :span="8">
+                            <a-form-item label="到期前可续费天数">
+                                <a-input-number v-model:value="baseForm.renewalWindowDaysBeforeExpire" :min="0" style="width: 100%" placeholder="到期前多少天可续费" />
+                            </a-form-item>
+                        </a-col>
+                        <a-col :span="8">
+                            <a-form-item label="到期后宽限天数">
+                                <a-input-number v-model:value="baseForm.renewalGraceDaysAfterExpire" :min="0" style="width: 100%" placeholder="到期后多少天内仍可续费" />
+                            </a-form-item>
+                        </a-col>
+                    </a-row>
+
+                    <a-row v-if="activeTab === 'SINGLE'" :gutter="16">
                     <a-col :span="8">
                         <a-form-item label="单卡类型" required>
                             <a-select v-model:value="singleForm.cardType">
@@ -623,22 +656,34 @@ onMounted(() => {
                 </a-row>
 
                 <a-row :gutter="16">
-                    <a-col :span="8">
-                        <a-form-item label="主图URL">
-                            <a-input v-model:value="baseForm.mainImage" />
+                    <a-col :span="12">
+                        <a-form-item label="主图">
+                            <MediaUpload
+                                v-model="baseForm.mainImage"
+                                biz-type="product"
+                                :multiple="false"
+                                :max-count="1"
+                                :draggable="false"
+                                :accept-config="{ image: true, video: false }"
+                                :limit-config="{ imageMaxSizeMb: 10 }"
+                                :show-hint="false"
+                                list-type="card"
+                            />
                         </a-form-item>
                     </a-col>
-                    <a-col :span="8">
-                        <a-form-item label="详情图URLs(逗号分隔)">
-                            <a-input v-model:value="baseForm.detailImagesText" />
-                        </a-form-item>
-                    </a-col>
-                    <a-col :span="8">
-                        <a-form-item label="配送方式">
-                            <a-select v-model:value="baseForm.deliveryMode">
-                                <a-select-option value="DIRECT">DIRECT 自动发放</a-select-option>
-                                <a-select-option value="MANUAL_ACTIVATE">MANUAL_ACTIVATE 人工激活</a-select-option>
-                            </a-select>
+                    <a-col :span="12">
+                        <a-form-item label="详情图">
+                            <MediaUpload
+                                v-model="baseForm.detailImages"
+                                biz-type="product"
+                                :multiple="true"
+                                :max-count="9"
+                                :draggable="true"
+                                :accept-config="{ image: true, video: false }"
+                                :limit-config="{ imageMaxSizeMb: 10 }"
+                                :show-hint="false"
+                                list-type="card"
+                            />
                         </a-form-item>
                     </a-col>
                 </a-row>

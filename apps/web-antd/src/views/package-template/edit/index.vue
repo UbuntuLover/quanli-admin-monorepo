@@ -61,6 +61,24 @@
 
                     <a-row :gutter="16">
                         <a-col :span="8">
+                            <a-form-item label="是否允许续费">
+                                <a-switch v-model:checked="baseForm.allowRenewal" checked-value="1" unchecked-value="0"/>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :span="8">
+                            <a-form-item label="到期前可续费天数">
+                                <a-input-number v-model:value="baseForm.renewalWindowDaysBeforeExpire" :min="0" style="width: 100%" placeholder="到期前多少天可续费"/>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :span="8">
+                            <a-form-item label="到期后宽限天数">
+                                <a-input-number v-model:value="baseForm.renewalGraceDaysAfterExpire" :min="0" style="width: 100%" placeholder="到期后多少天内仍可续费"/>
+                            </a-form-item>
+                        </a-col>
+                    </a-row>
+
+                    <a-row :gutter="16">
+                        <a-col :span="8">
                             <a-form-item label="单卡类型" required>
                                 <a-select v-model:value="singleForm.cardType">
                                     <a-select-option value="COURSE">课程卡 COURSE</a-select-option>
@@ -160,14 +178,33 @@
 
                     <a-row :gutter="16">
                         <a-col :span="12">
-                            <a-form-item label="主图URL">
-                                <a-input v-model:value="baseForm.mainImage" placeholder="请输入主图URL"/>
+                            <a-form-item label="主图">
+                                <MediaUpload
+                                    v-model="baseForm.mainImage"
+                                    biz-type="product"
+                                    :multiple="false"
+                                    :max-count="1"
+                                    :draggable="false"
+                                    :accept-config="{ image: true, video: false }"
+                                    :limit-config="{ imageMaxSizeMb: 10 }"
+                                    :show-hint="false"
+                                    list-type="card"
+                                />
                             </a-form-item>
                         </a-col>
                         <a-col :span="12">
-                            <a-form-item label="详情图URL（多张用逗号分隔）">
-                                <a-input v-model:value="baseForm.detailImagesText"
-                                         placeholder="请输入详情图URL，多张用逗号分隔"/>
+                            <a-form-item label="详情图">
+                                <MediaUpload
+                                    v-model="baseForm.detailImages"
+                                    biz-type="product"
+                                    :multiple="true"
+                                    :max-count="9"
+                                    :draggable="true"
+                                    :accept-config="{ image: true, video: false }"
+                                    :limit-config="{ imageMaxSizeMb: 10 }"
+                                    :show-hint="false"
+                                    list-type="card"
+                                />
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -292,6 +329,24 @@
                         </a-col>
                     </a-row>
 
+                    <a-row :gutter="16">
+                        <a-col :span="8">
+                            <a-form-item label="是否允许续费">
+                                <a-switch v-model:checked="baseForm.allowRenewal" checked-value="1" unchecked-value="0"/>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :span="8">
+                            <a-form-item label="到期前可续费天数">
+                                <a-input-number v-model:value="baseForm.renewalWindowDaysBeforeExpire" :min="0" style="width: 100%" placeholder="到期前多少天可续费"/>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :span="8">
+                            <a-form-item label="到期后宽限天数">
+                                <a-input-number v-model:value="baseForm.renewalGraceDaysAfterExpire" :min="0" style="width: 100%" placeholder="到期后多少天内仍可续费"/>
+                            </a-form-item>
+                        </a-col>
+                    </a-row>
+
                     <a-divider orientation="left">商品信息</a-divider>
                     <a-row :gutter="16">
                         <a-col :span="8">
@@ -344,14 +399,33 @@
 
                     <a-row :gutter="16">
                         <a-col :span="12">
-                            <a-form-item label="主图URL">
-                                <a-input v-model:value="baseForm.mainImage" placeholder="请输入主图URL"/>
+                            <a-form-item label="主图">
+                                <MediaUpload
+                                    v-model="baseForm.mainImage"
+                                    biz-type="product"
+                                    :multiple="false"
+                                    :max-count="1"
+                                    :draggable="false"
+                                    :accept-config="{ image: true, video: false }"
+                                    :limit-config="{ imageMaxSizeMb: 10 }"
+                                    :show-hint="false"
+                                    list-type="card"
+                                />
                             </a-form-item>
                         </a-col>
                         <a-col :span="12">
-                            <a-form-item label="详情图URL（多张用逗号分隔）">
-                                <a-input v-model:value="baseForm.detailImagesText"
-                                         placeholder="请输入详情图URL，多张用逗号分隔"/>
+                            <a-form-item label="详情图">
+                                <MediaUpload
+                                    v-model="baseForm.detailImages"
+                                    biz-type="product"
+                                    :multiple="true"
+                                    :max-count="9"
+                                    :draggable="true"
+                                    :accept-config="{ image: true, video: false }"
+                                    :limit-config="{ imageMaxSizeMb: 10 }"
+                                    :show-hint="false"
+                                    list-type="card"
+                                />
                             </a-form-item>
                         </a-col>
                     </a-row>
@@ -542,6 +616,8 @@ import {
 import {getAllVenuesApi, type VenueDetailDTO} from '#/api/venue/list';
 import {getCategoryTreeApi} from '#/api/products/productCategory';
 import type {CategoryDTO} from '#/types/category';
+import {MediaUpload} from '#/components/upload';
+import type {MediaItem} from '#/components/upload';
 
 type CardType = 'COURSE' | 'VENUE' | 'COMBO';
 
@@ -596,8 +672,8 @@ const baseForm = reactive({
     brandId: undefined as number | undefined,
     subtitle: '',
     description: '',
-    mainImage: '',
-    detailImagesText: '',
+    mainImage: null as MediaItem | null,
+    detailImages: [] as MediaItem[],
 
     deliveryMode: 'MANUAL_ACTIVATE' as 'DIRECT' | 'MANUAL_ACTIVATE',
     isNew: '0' as '0' | '1',
@@ -608,6 +684,10 @@ const baseForm = reactive({
     stockQuantity: 999999,
 
     attributesKv: [{key: '', value: ''}] as KvItem[],
+
+    allowRenewal: 0,
+    renewalWindowDaysBeforeExpire: 7,
+    renewalGraceDaysAfterExpire: 3,
 });
 
 const singleForm = reactive({
@@ -845,6 +925,10 @@ async function loadTemplateDetail(id: string) {
         baseForm.isNew = detail.isNew === 1 ? '1' : '0';
         baseForm.isHot = detail.isHot === 1 ? '1' : '0';
 
+        baseForm.allowRenewal = detail.allowRenewal === 1 ? '1' : '0';
+        baseForm.renewalWindowDaysBeforeExpire = detail.renewalWindowDaysBeforeExpire || 7;
+        baseForm.renewalGraceDaysAfterExpire = detail.renewalGraceDaysAfterExpire || 3;
+
         if (detail.cardType === 'COURSE' || detail.cardType === 'VENUE') {
             cardType.value = detail.cardType;
             singleForm.cardType = detail.cardType;
@@ -868,8 +952,24 @@ async function loadTemplateDetail(id: string) {
             baseForm.productName = detail.productName;
             baseForm.subtitle = detail.subtitle || '';
             baseForm.description = detail.description || '';
-            baseForm.mainImage = detail.mainImage || '';
-            baseForm.detailImagesText = (detail.detailImages || []).join(',');
+            baseForm.mainImage = detail.mainImage ? {
+                fileId: 0,
+                mediaType: 'image',
+                url: detail.mainImage,
+                previewUrl: detail.mainImage,
+                originalName: '主图',
+                size: 0,
+                objectKey: '',
+            } : null;
+            baseForm.detailImages = (detail.detailImages || []).map((url: string, index: number) => ({
+                fileId: 0,
+                mediaType: 'image',
+                url: url,
+                previewUrl: url,
+                originalName: `详情图${index + 1}`,
+                size: 0,
+                objectKey: '',
+            }));
             baseForm.brandId = detail.brandId != null ? String(detail.brandId) : undefined;
         }
 
@@ -933,13 +1033,17 @@ async function submitSingle() {
         venueBenefitType: isVenue.value ? singleForm.venueBenefitType ?? null : null,
         venueTimes: isVenue.value ? singleForm.venueTimes ?? null : null,
 
+        allowRenewal: Number(baseForm.allowRenewal),
+        renewalWindowDaysBeforeExpire: baseForm.renewalWindowDaysBeforeExpire,
+        renewalGraceDaysAfterExpire: baseForm.renewalGraceDaysAfterExpire,
+
         productName: baseForm.productName.trim(),
         categoryId: getCategoryId(),
         brandId: baseForm.brandId != null ? String(baseForm.brandId) : null,
         subtitle: baseForm.subtitle || null,
         description: baseForm.description || null,
-        mainImage: baseForm.mainImage || null,
-        detailImages: parseStringArray(baseForm.detailImagesText) ?? null,
+        mainImage: baseForm.mainImage?.url || null,
+        detailImages: baseForm.detailImages.length > 0 ? baseForm.detailImages.map(img => img.url) : null,
 
         deliveryMode: baseForm.deliveryMode,
         isNew: Number(baseForm.isNew),
@@ -991,13 +1095,17 @@ async function submitCombo() {
 
         children: normalizedChildren,
 
+        allowRenewal: Number(baseForm.allowRenewal),
+        renewalWindowDaysBeforeExpire: baseForm.renewalWindowDaysBeforeExpire,
+        renewalGraceDaysAfterExpire: baseForm.renewalGraceDaysAfterExpire,
+
         productName: baseForm.productName.trim(),
         categoryId: getCategoryId(),
         brandId: baseForm.brandId != null ? String(baseForm.brandId) : null,
         subtitle: baseForm.subtitle || null,
         description: baseForm.description || null,
-        mainImage: baseForm.mainImage || null,
-        detailImages: parseStringArray(baseForm.detailImagesText) ?? null,
+        mainImage: baseForm.mainImage?.url || null,
+        detailImages: baseForm.detailImages.length > 0 ? baseForm.detailImages.map(img => img.url) : null,
 
         deliveryMode: baseForm.deliveryMode,
         isNew: Number(baseForm.isNew),
